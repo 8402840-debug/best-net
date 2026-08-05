@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>卡片保险柜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1420;
+    --panel: #171e2e;
+    --panel-hi: #1e2740;
+    --line: #2a3450;
+    --gold: #c9a24b;
+    --gold-dim: #8a743a;
+    --text: #eef0f4;
+    --muted: #8590a6;
+    --danger: #e05252;
+    --danger-dim: #7a3535;
+    --success: #4caf7d;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(201,162,75,0.06), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(76,175,125,0.05), transparent 40%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 80px;
+  }
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  /* Header */
+  header{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom: 18px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand svg{ flex-shrink:0; }
+  .brand h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 22px; font-weight:700; margin:0; letter-spacing:0.2px;
+  }
+  .brand p{ margin:2px 0 0; font-size:12.5px; color: var(--muted); }
+
+  .status-pill{
+    display:flex; align-items:center; gap:7px;
+    background: rgba(224,82,82,0.1);
+    border:1px solid rgba(224,82,82,0.35);
+    color:#f0a3a3;
+    padding:7px 12px;
+    border-radius:8px;
+    font-size:12.5px;
+    font-weight:500;
+  }
+  .status-pill svg{ flex-shrink:0; }
+
+  /* Toolbar */
+  .toolbar{ display:flex; gap:10px; margin: 22px 0 20px; flex-wrap:wrap; }
+  .search{
+    flex:1; min-width:200px;
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+  }
+  .search::placeholder{ color: var(--muted); }
+  .search:focus{ outline:none; border-color: var(--gold-dim); }
+
+  button{ font-family:'Inter',sans-serif; cursor:pointer; border:none; }
+  .btn-primary{
+    background: var(--gold);
+    color: #1a1408;
+    font-weight:600;
+    padding: 11px 18px;
+    border-radius:10px;
+    font-size:14px;
+    display:flex; align-items:center; gap:8px;
+    transition: filter .15s ease, transform .1s ease;
+  }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-primary:active{ transform: translateY(1px); }
+
+  .btn-ghost{
+    background: var(--panel);
+    border:1px solid var(--line);
+    color: var(--text);
+    padding: 11px 14px;
+    border-radius:10px;
+    font-size:13.5px;
+    display:flex; align-items:center; gap:7px;
+  }
+  .btn-ghost:hover{ border-color: var(--gold-dim); }
+
+  /* Card grid */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap:18px;
+  }
+
+  .card{
+    position:relative;
+    border-radius:16px;
+    padding:20px 20px 16px;
+    height:172px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    cursor:pointer;
+    border:1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    transition: transform .18s ease, box-shadow .18s ease;
+    overflow:hidden;
+  }
+  .card:hover{ transform: translateY(-3px); box-shadow: 0 14px 28px rgba(0,0,0,0.45); }
+  .card::after{
+    content:"";
+    position:absolute; inset:0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.06), transparent 55%);
+    pointer-events:none;
+  }
+
+  .theme-midnight{ background: linear-gradient(135deg, #26324a, #131a29); }
+  .theme-emerald{ background: linear-gradient(135deg, #0e5a45, #052b22); }
+  .theme-plum{ background: linear-gradient(135deg, #5c2464, #250a2b); }
+  .theme-slate{ background: linear-gradient(135deg, #3a4661, #1b2333); }
+  .theme-copper{ background: linear-gradient(135deg, #8a5330, #402314); }
+
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .card-label{ font-size:13.5px; font-weight:600; color:#fff; opacity:0.92; }
+  .chip{ width:34px; height:25px; border-radius:5px; background: linear-gradient(135deg,#e7d9a8,#b89a55); position:relative; }
+  .chip::before{
+    content:""; position:absolute; inset:4px;
+    border:1px solid rgba(0,0,0,0.25); border-radius:3px;
+  }
+
+  .card-number{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:16.5px; letter-spacing:2px; color:#fff; opacity:0.95;
+  }
+  .card-bottom{ display:flex; justify-content:space-between; align-items:flex-end; }
+  .card-holder{ font-size:11.5px; letter-spacing:0.5px; text-transform:uppercase; color:rgba(255,255,255,0.75); }
+  .card-expiry{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:rgba(255,255,255,0.75); }
+  .card-bank{ position:absolute; top:18px; right:20px; font-size:11px; color:rgba(255,255,255,0.55); font-weight:500; }
+
+  /* Empty state */
+  .empty{
+    grid-column: 1/-1;
+    text-align:center;
+    padding: 70px 20px;
+    border:1px dashed var(--line);
+    border-radius:16px;
+    color: var(--muted);
+  }
+  .empty svg{ margin-bottom:14px; opacity:0.6; }
+  .empty h3{ color: var(--text); font-family:'Space Grotesk',sans-serif; margin:0 0 6px; font-size:16px; }
+  .empty p{ margin:0; font-size:13.5px; }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background: rgba(6,9,16,0.72);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:20px;
+    backdrop-filter: blur(2px);
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    width:100%; max-width:460px;
+    padding:26px;
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal h2{ font-family:'Space Grotesk',sans-serif; margin:0 0 18px; font-size:18px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px; font-weight:500; }
+  .field input, .field textarea{
+    width:100%; background: var(--panel-hi); border:1px solid var(--line);
+    border-radius:9px; padding:10px 12px; color:var(--text); font-size:14px;
+    font-family:'Inter',sans-serif;
+  }
+  .field input:focus, .field textarea:focus{ outline:none; border-color: var(--gold-dim); }
+  .field-row{ display:flex; gap:12px; }
+  .field-row .field{ flex:1; }
+  .swatches{ display:flex; gap:10px; margin-top:4px; }
+  .swatch{
+    width:32px; height:32px; border-radius:8px; cursor:pointer;
+    border:2px solid transparent;
+  }
+  .swatch.selected{ border-color: var(--gold); }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  .btn-danger-text{ color: var(--danger); background:none; font-size:13.5px; margin-right:auto; padding:11px 4px; }
+
+  /* Detail view */
+  .detail-card{
+    border-radius:16px; padding:22px; margin-bottom:18px;
+    position:relative; overflow:hidden;
+  }
+  .detail-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .detail-row:last-child{ border-bottom:none; }
+  .detail-label{ font-size:12px; color: var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+  .detail-value{ font-family:'IBM Plex Mono', monospace; font-size:15px; }
+  .icon-btn{
+    background:none; padding:6px; border-radius:6px; color:var(--muted); display:flex;
+  }
+  .icon-btn:hover{ background: rgba(255,255,255,0.06); color:var(--text); }
+  .value-actions{ display:flex; align-items:center; gap:4px; }
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:#1c2436; border:1px solid var(--gold-dim); color:var(--text);
+    padding:10px 18px; border-radius:9px; font-size:13.5px; z-index:100;
+    opacity:0; pointer-events:none; transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(-4px); }
+
+  footer{ text-align:center; margin-top:40px; color:var(--muted); font-size:12px; }
+  footer a{ color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="10" width="18" height="11" rx="2" stroke="#c9a24b" stroke-width="1.6"/>
+        <path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#c9a24b" stroke-width="1.6"/>
+        <circle cx="12" cy="15" r="1.6" fill="#c9a24b"/>
+      </svg>
+      <div>
+        <h1>卡片保险柜</h1>
+        <p>本地存储 · 仅保存在此浏览器</p>
+      </div>
+    </div>
+    <div class="status-pill" id="statusPill">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" stroke="currentColor" stroke-width="1.6"/></svg>
+      未加密存储
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input class="search" id="searchInput" placeholder="搜索卡片名称 / 银行 / 持卡人...">
+    <button class="btn-ghost" id="exportBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      导出备份
+    </button>
+    <button class="btn-ghost" id="importBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 21V9m0 0 4 4m-4-4-4 4M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      导入备份
+    </button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+    <button class="btn-primary" id="addBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#1a1408" stroke-width="2" stroke-linecap="round"/></svg>
+      添加卡片
+    </button>
+  </div>
+
+  <div class="grid" id="cardGrid"></div>
+
+  <footer>数据仅保存在当前浏览器的本地存储中，清除浏览器数据会导致记录丢失。建议定期使用"导出备份"。</footer>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <h2 id="formTitle">添加卡片</h2>
+    <input type="hidden" id="editId">
+    <div class="field">
+      <label>卡片名称</label>
+      <input id="f_label" placeholder="例如：招商银行信用卡">
+    </div>
+    <div class="field">
+      <label>卡号</label>
+      <input id="f_number" placeholder="1234 5678 9012 3456" inputmode="numeric">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>持卡人</label>
+        <input id="f_holder" placeholder="姓名">
+      </div>
+      <div class="field">
+        <label>有效期 (MM/YY)</label>
+        <input id="f_expiry" placeholder="08/29" maxlength="5">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>CVV</label>
+        <input id="f_cvv" placeholder="123" maxlength="4" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>发卡行</label>
+        <input id="f_bank" placeholder="例如：招商银行">
+      </div>
+    </div>
+    <div class="field">
+      <label>备注（可选）</label>
+      <textarea id="f_note" rows="2" placeholder="附加信息..."></textarea>
+    </div>
+    <div class="field">
+      <label>卡片颜色</label>
+      <div class="swatches" id="swatches">
+        <div class="swatch theme-midnight selected" data-theme="theme-midnight"></div>
+        <div class="swatch theme-emerald" data-theme="theme-emerald"></div>
+        <div class="swatch theme-plum" data-theme="theme-plum"></div>
+        <div class="swatch theme-slate" data-theme="theme-slate"></div>
+        <div class="swatch theme-copper" data-theme="theme-copper"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger-text" id="deleteBtn" style="display:none">删除此卡</button>
+      <button class="btn-ghost" id="cancelBtn">取消</button>
+      <button class="btn-primary" id="saveBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
+    <h2 id="detailLabel">卡片详情</h2>
+    <div class="detail-card" id="detailCardVisual"></div>
+    <div id="detailRows"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="editFromDetailBtn">编辑</button>
+      <button class="btn-primary" id="closeDetailBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'cardVaultData_v1';
+let cards = [];
+let revealState = {}; // per-card reveal toggle in detail view
+
+function loadCards(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    cards = raw ? JSON.parse(raw) : [];
+  }catch(e){ cards = []; }
+}
+function saveCards(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+}
+function uid(){ return 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+
+function maskNumber(num){
+  const clean = (num||'').replace(/\s/g,'');
+  if(clean.length <= 4) return clean;
+  const last4 = clean.slice(-4);
+  return '•••• •••• •••• ' + last4;
+}
+function formatNumber(num){
+  const clean = (num||'').replace(/\s/g,'');
+  return clean.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 1600);
+}
+
+function copyText(text, label){
+  navigator.clipboard.writeText(text).then(()=> showToast(label + ' 已复制'));
+}
+
+function renderGrid(){
+  const grid = document.getElementById('cardGrid');
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = cards.filter(c=>{
+    if(!q) return true;
+    return (c.label||'').toLowerCase().includes(q) ||
+           (c.bank||'').toLowerCase().includes(q) ||
+           (c.holder||'').toLowerCase().includes(q);
+  });
+
+  if(filtered.length === 0){
+    grid.innerHTML = `<div class="empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="#8590a6" stroke-width="1.5"/><path d="M3 10h18" stroke="#8590a6" stroke-width="1.5"/></svg>
+      <h3>${cards.length === 0 ? '还没有卡片' : '没有找到匹配的卡片'}</h3>
+      <p>${cards.length === 0 ? '点击右上方"添加卡片"开始记录' : '换个关键词试试'}</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(c => `
+    <div class="card ${c.theme || 'theme-midnight'}" data-id="${c.id}">
+      <div class="card-bank">${escapeHtml(c.bank||'')}</div>
+      <div class="card-top">
+        <div class="card-label">${escapeHtml(c.label||'未命名卡片')}</div>
+      </div>
+      <div>
+        <div class="chip" style="margin-bottom:10px;"></div>
+        <div class="card-number">${maskNumber(c.number)}</div>
+      </div>
+      <div class="card-bottom">
+        <div class="card-holder">${escapeHtml(c.holder||'')}</div>
+        <div class="card-expiry">${escapeHtml(c.expiry||'')}</div>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.card').forEach(el=>{
+    el.addEventListener('click', ()=> openDetail(el.dataset.id));
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ---- Add/Edit Modal ---- */
+const formOverlay = document.getElementById('formOverlay');
+let selectedTheme = 'theme-midnight';
+
+function openAddForm(){
+  document.getElementById('formTitle').textContent = '添加卡片';
+  document.getElementById('editId').value = '';
+  ['f_label','f_number','f_holder','f_expiry','f_cvv','f_bank','f_note'].forEach(id=> document.getElementById(id).value='');
+  selectedTheme = 'theme-midnight';
+  updateSwatchSelection();
+  document.getElementById('deleteBtn').style.display = 'none';
+  formOverlay.classList.add('show');
+}
+
+function openEditForm(id){
+  const c = cards.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('formTitle').textContent = '编辑卡片';
+  document.getElementById('editId').value = id;
+  document.getElementById('f_label').value = c.label||'';
+  document.getElementById('f_number').value = c.number||'';
+  document.getElementById('f_holder').value = c.holder||'';
+  document.getElementById('f_expiry').value = c.expiry||'';
+  document.getElementById('f_cvv').value = c.cvv||'';
+  document.getElementById('f_bank').value = c.bank||'';
+  document.getElementById('f_note').value = c.note||'';
+  selectedTheme = c.theme || 'theme-midnight';
+  updateSwatchSelection();
+  document.getElementById('deleteBtn').style.display = 'block';
+  formOverlay.classList.add('show');
+}
+
+function updateSwatchSelection(){
+  document.querySelectorAll('.swatch').forEach(s=>{
+    s.classList.toggle('selected', s.dataset.theme === selectedTheme);
+  });
+}
+
+document.getElementById('swatches').addEventListener('click', (e)=>{
+  const sw = e.target.closest('.swatch');
+  if(!sw) return;
+  selectedTheme = sw.dataset.theme;
+  updateSwatchSelection();
+});
+
+document.getElementById('addBtn').addEventListener('click', openAddForm);
+document.getElementById('cancelBtn').addEventListener('click', ()=> formOverlay.classList.remove('show'));
+formOverlay.addEventListener('click', (e)=>{ if(e.target === formOverlay) formOverlay.classList.remove('show'); });
+
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const label = document.getElementById('f_label').value.trim();
+  const number = document.getElementById('f_number').value.trim();
+  if(!label || !number){
+    showToast('请填写卡片名称和卡号');
+    return;
+  }
+  const editId = document.getElementById('editId').value;
+  const data = {
+    label,
+    number,
+    holder: document.getElementById('f_holder').value.trim(),
+    expiry: document.getElementById('f_expiry').value.trim(),
+    cvv: document.getElementById('f_cvv').value.trim(),
+    bank: document.getElementById('f_bank').value.trim(),
+    note: document.getElementById('f_note').value.trim(),
+    theme: selectedTheme
+  };
+  if(editId){
+    const idx = cards.findIndex(c=>c.id===editId);
+    if(idx>-1) cards[idx] = {...cards[idx], ...data};
+    showToast('已更新');
+  }else{
+    cards.push({id: uid(), ...data});
+    showToast('已添加');
+  }
+  saveCards();
+  renderGrid();
+  formOverlay.classList.remove('show');
+});
+
+document.getElementById('deleteBtn').addEventListener('click', ()=>{
+  const editId = document.getElementById('editId').value;
+  if(!editId) return;
+  if(confirm('确定要删除这张卡片吗？此操作无法撤销。')){
+    cards = cards.filter(c=>c.id!==editId);
+    saveCards();
+    renderGrid();
+    formOverlay.classList.remove('show');
+    showToast('已删除');
+  }
+});
+
+/* ---- Detail Modal ---- */
+const detailOverlay = document.getElementById('detailOverlay');
+let currentDetailId = null;
+
+function openDetail(id){
+  currentDetailId = id;
+  const c = cards.find(x=>x.id===id);
+  if(!c) return;
+  revealState[id] = false;
+  document.getElementById('detailLabel').textContent = c.label || '未命名卡片';
+  renderDetail(c);
+  detailOverlay.classList.add('show');
+}
+
+function renderDetail(c){
+  const revealed = revealState[c.id];
+  document.getElementById('detailCardVisual').className = 'detail-card ' + (c.theme||'theme-midnight');
+  document.getElementById('detailCardVisual').innerHTML = `
+    <div class="chip" style="margin-bottom:14px;"></div>
+    <div class="card-number" style="font-size:19px;">${revealed ? formatNumber(c.number) : maskNumber(c.number)}</div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;">
+      <div class="card-holder">${escapeHtml(c.holder||'')}</div>
+      <div class="card-expiry">${escapeHtml(c.expiry||'')}</div>
+    </div>
+  `;
+
+  const rows = [];
+  rows.push(row('卡号', revealed ? formatNumber(c.number) : maskNumber(c.number), c.number, '卡号'));
+  rows.push(row('CVV', revealed ? (c.cvv||'—') : (c.cvv ? '•••' : '—'), c.cvv, 'CVV'));
+  rows.push(row('有效期', c.expiry || '—', c.expiry, '有效期', false));
+  rows.push(row('持卡人', c.holder || '—', c.holder, '持卡人', false));
+  rows.push(row('发卡行', c.bank || '—', c.bank, '发卡行', false));
+  if(c.note) rows.push(row('备注', c.note, c.note, '备注', false));
+
+  document.getElementById('detailRows').innerHTML = rows.join('') + `
+    <div style="text-align:center; margin-top:14px;">
+      <button class="btn-ghost" id="toggleRevealBtn">
+        ${revealed ? '隐藏敏感信息' : '显示卡号 / CVV'}
+      </button>
+    </div>
+  `;
+
+  document.getElementById('toggleRevealBtn').addEventListener('click', ()=>{
+    revealState[c.id] = !revealState[c.id];
+    renderDetail(c);
+  });
+
+  document.querySelectorAll('[data-copy]').forEach(btn=>{
+    btn.addEventListener('click', ()=> copyText(btn.dataset.copy, btn.dataset.copyLabel));
+  });
+}
+
+function row(label, display, copyValue, copyLabel, copyable=true){
+  return `<div class="detail-row">
+    <div class="detail-label">${label}</div>
+    <div class="value-actions">
+      <div class="detail-value">${escapeHtml(String(display))}</div>
+      ${copyable && copyValue ? `<button class="icon-btn" data-copy="${escapeHtml(String(copyValue))}" data-copy-label="${copyLabel}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>` : ''}
+    </div>
+  </div>`;
+}
+
+document.getElementById('closeDetailBtn').addEventListener('click', ()=> detailOverlay.classList.remove('show'));
+detailOverlay.addEventListener('click', (e)=>{ if(e.target === detailOverlay) detailOverlay.classList.remove('show'); });
+document.getElementById('editFromDetailBtn').addEventListener('click', ()=>{
+  detailOverlay.classList.remove('show');
+  openEditForm(currentDetailId);
+});
+
+/* ---- Search ---- */
+document.getElementById('searchInput').addEventListener('input', renderGrid);
+
+/* ---- Export / Import ---- */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(cards, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'card-vault-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('备份已导出');
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const imported = JSON.parse(ev.target.result);
+      if(!Array.isArray(imported)) throw new Error('格式不正确');
+      const mode = confirm('点击"确定"合并到现有数据，点击"取消"则替换全部现有数据');
+      if(mode){
+        const existingIds = new Set(cards.map(c=>c.id));
+        imported.forEach(c=>{
+          if(!c.id || existingIds.has(c.id)) c.id = uid();
+          cards.push(c);
+        });
+      }else{
+        cards = imported.map(c=> ({...c, id: c.id || uid()}));
+      }
+      saveCards();
+      renderGrid();
+      showToast('导入成功');
+    }catch(err){
+      showToast('导入失败：文件格式不正确');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ---- Init ---- */
+loadCards();
+renderGrid();
+</script>
+</body>
+</html>
