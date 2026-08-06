@@ -24,7 +24,7 @@ jobs:
 
       - name: Build exe
         run: |
-          pyinstaller --onefile --windowed --name CardVault --add-data "card-vault.html;." app.py
+          pyinstaller --onefile --windowed --name CardVault --icon "icon.ico" --add-data "card-vault.html;." app.py
 
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
