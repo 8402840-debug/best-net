@@ -1,5 +1,6 @@
 import sys
 import os
+import traceback
 import webview
 
 
@@ -10,6 +11,13 @@ def resource_path(relative_path):
     except AttributeError:
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
+
+
+def app_dir():
+    """exe 所在目录（用于写日志），而不是临时解压目录"""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 
 
 class Api:
@@ -70,8 +78,20 @@ def main():
         js_api=api,
     )
     api.window = window
-    webview.start()
+    # 显式指定 Windows 上的 GUI 后端，避免自动探测阶段卡住
+    webview.start(gui="edgechromium", debug=False)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        # --windowed 模式没有控制台，出错会静默卡住/闪退
+        # 把异常写到 exe 同目录的日志文件，方便排查
+        log_path = os.path.join(app_dir(), "card-vault-error.log")
+        try:
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(traceback.format_exc())
+        except Exception:
+            pass
+        raise

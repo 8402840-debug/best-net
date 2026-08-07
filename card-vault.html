@@ -124,7 +124,9 @@
     box-shadow: 0 8px 20px rgba(0,0,0,0.35);
     transition: transform .18s ease, box-shadow .18s ease;
     overflow:hidden;
+    animation: cardIn .22s ease both;
   }
+  @keyframes cardIn{ from{ opacity:0; transform: translateY(8px); } to{ opacity:1; transform: translateY(0); } }
   .card:hover{ transform: translateY(-3px); box-shadow: 0 14px 28px rgba(0,0,0,0.45); }
   .card::after{
     content:"";
@@ -372,6 +374,8 @@
     <div class="detail-card" id="detailCardVisual"></div>
     <div id="detailRows"></div>
     <div class="modal-actions">
+      <button class="btn-danger-text" id="duplicateBtn" style="color:var(--muted);">复制此卡</button>
+      <button class="btn-ghost" id="copyAllBtn">复制全部信息</button>
       <button class="btn-ghost" id="editFromDetailBtn">编辑</button>
       <button class="btn-primary" id="closeDetailBtn">关闭</button>
     </div>
@@ -497,11 +501,11 @@ function renderGrid(){
     return;
   }
 
-  grid.innerHTML = filtered.map(c => {
+  grid.innerHTML = filtered.map((c, i) => {
     const exp = checkExpiry(c.expiry);
     const bankLine = [c.bank, c.category].filter(Boolean).join(' · ');
     return `
-    <div class="card ${c.theme || 'theme-midnight'}" data-id="${c.id}">
+    <div class="card ${c.theme || 'theme-midnight'}" data-id="${c.id}" style="animation-delay:${Math.min(i*25,300)}ms;">
       <div class="card-top">
         <span style="display:flex;align-items:center; min-width:0;">
           <button class="pin-btn" data-pin="${c.id}" title="${c.pinned?'取消置顶':'置顶'}">
@@ -617,6 +621,19 @@ document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape'){
     formOverlay.classList.remove('show');
     detailOverlay.classList.remove('show');
+  }
+  if(e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+// 安全细节：切换到其他窗口/最小化时，自动隐藏已展开的敏感信息
+window.addEventListener('blur', ()=>{
+  if(currentDetailId && revealState[currentDetailId]){
+    revealState[currentDetailId] = false;
+    const c = cards.find(x=>x.id===currentDetailId);
+    if(c) renderDetail(c);
   }
 });
 
@@ -737,6 +754,31 @@ detailOverlay.addEventListener('click', (e)=>{ if(e.target === detailOverlay) de
 document.getElementById('editFromDetailBtn').addEventListener('click', ()=>{
   detailOverlay.classList.remove('show');
   openEditForm(currentDetailId);
+});
+document.getElementById('copyAllBtn').addEventListener('click', ()=>{
+  const c = cards.find(x=>x.id===currentDetailId);
+  if(!c) return;
+  const text = [
+    `卡片名称：${c.label||''}`,
+    `卡号：${formatNumber(c.number)}`,
+    `CVV：${c.cvv||''}`,
+    `有效期：${c.expiry||''}`,
+    `持卡人：${c.holder||''}`,
+    `发卡行：${c.bank||''}`,
+    c.category ? `分类：${c.category}` : '',
+    c.note ? `备注：${c.note}` : ''
+  ].filter(Boolean).join('\n');
+  copyText(text, '全部信息');
+});
+document.getElementById('duplicateBtn').addEventListener('click', ()=>{
+  const c = cards.find(x=>x.id===currentDetailId);
+  if(!c) return;
+  const clone = {...c, id: uid(), label: (c.label||'未命名卡片') + ' 副本', pinned:false, createdAt: Date.now()};
+  cards.push(clone);
+  saveCards();
+  detailOverlay.classList.remove('show');
+  renderGrid();
+  showToast('已复制为新卡片');
 });
 
 /* ---- Search ---- */
