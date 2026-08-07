@@ -12,21 +12,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.11'
+          node-version: '20'
 
       - name: Install dependencies
-        run: |
-          pip install pyinstaller
+        run: npm install
 
-      - name: Build exe
-        run: |
-          pyinstaller --onefile --console --name CardVault --icon "icon.ico" --add-data "card-vault.html;." app.py
+      - name: Build portable exe
+        run: npx electron-builder --win portable
 
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
         with:
           name: CardVault-exe
-          path: dist/CardVault.exe
+          path: dist/*.exe

@@ -23,6 +23,17 @@
     --danger-dim: #7a3535;
     --success: #4caf7d;
   }
+  body[data-theme="light"]{
+    --bg: #f5f4f0;
+    --panel: #ffffff;
+    --panel-hi: #f0eee8;
+    --line: #e0ddd4;
+    --gold: #a97f2d;
+    --gold-dim: #c9a24b;
+    --text: #1d2129;
+    --muted: #6b7280;
+  }
+  body[data-theme="light"] .status-pill{ background: rgba(224,82,82,0.08); }
   *{ box-sizing:border-box; }
   body{
     margin:0;
@@ -105,6 +116,15 @@
     background: var(--panel); border:1px solid var(--line); color: var(--muted);
   }
   .cat-chip.active{ background: var(--gold); border-color: var(--gold); color:#1a1408; font-weight:600; }
+
+  .stats-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .stat-pill{
+    background: var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:10px 16px; font-size:12.5px; color:var(--muted); display:flex; align-items:baseline; gap:6px;
+  }
+  .stat-pill b{ font-size:17px; color: var(--text); font-family:var(--font-mono); font-weight:600; }
+  .stat-pill.warn b{ color:#f0c48a; }
+  .stat-pill.danger b{ color:#f5a3a3; }
 
   /* Card grid */
   .grid{
@@ -269,7 +289,12 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" stroke="currentColor" stroke-width="1.6"/></svg>
       未加密存储
     </div>
+    <button class="btn-ghost" id="themeToggle" style="padding:8px 10px;" title="切换主题">
+      <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
   </header>
+
+  <div class="stats-row" id="statsRow"></div>
 
   <div class="toolbar">
     <input class="search" id="searchInput" placeholder="搜索卡片名称 / 银行 / 持卡人...">
@@ -491,6 +516,7 @@ function renderGrid(){
   const counter = document.getElementById('cardCount');
   if(counter) counter.textContent = cards.length ? `共 ${cards.length} 张卡片` : '';
   renderCategoryChips();
+  renderStats();
 
   if(filtered.length === 0){
     grid.innerHTML = `<div class="empty">
@@ -626,6 +652,10 @@ document.addEventListener('keydown', (e)=>{
     e.preventDefault();
     document.getElementById('searchInput').focus();
   }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n'){
+    e.preventDefault();
+    openAddForm();
+  }
 });
 
 // 安全细节：切换到其他窗口/最小化时，自动隐藏已展开的敏感信息
@@ -636,6 +666,33 @@ window.addEventListener('blur', ()=>{
     if(c) renderDetail(c);
   }
 });
+
+/* ---- Theme toggle ---- */
+function applyTheme(theme){
+  document.body.dataset.theme = theme;
+  document.getElementById('themeIcon').innerHTML = theme === 'light'
+    ? '<circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+    : '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="1.6"/>';
+  localStorage.setItem('cardVaultTheme', theme);
+}
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  applyTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light');
+});
+applyTheme(localStorage.getItem('cardVaultTheme') || 'dark');
+
+/* ---- Stats bar ---- */
+function renderStats(){
+  const row = document.getElementById('statsRow');
+  if(cards.length === 0){ row.innerHTML=''; return; }
+  const expiring = cards.filter(c=> checkExpiry(c.expiry) === 'soon').length;
+  const expired = cards.filter(c=> checkExpiry(c.expiry) === 'expired').length;
+  const cats = new Set(cards.map(c=>c.category).filter(Boolean)).size;
+  let html = `<div class="stat-pill"><b>${cards.length}</b>张卡片</div>`;
+  if(cats) html += `<div class="stat-pill"><b>${cats}</b>个分类</div>`;
+  if(expiring) html += `<div class="stat-pill warn"><b>${expiring}</b>张即将到期</div>`;
+  if(expired) html += `<div class="stat-pill danger"><b>${expired}</b>张已过期</div>`;
+  row.innerHTML = html;
+}
 
 document.getElementById('addBtn').addEventListener('click', openAddForm);
 document.getElementById('cancelBtn').addEventListener('click', ()=> formOverlay.classList.remove('show'));
@@ -814,7 +871,13 @@ function applyImportedCards(text, silent){
 
 document.getElementById('exportBtn').addEventListener('click', async ()=>{
   const jsonStr = JSON.stringify(cards, null, 2);
-  if(window.pywebview && window.pywebview.api && window.pywebview.api.export_backup){
+  if(window.electronAPI){
+    try{
+      const res = await window.electronAPI.exportBackup(jsonStr);
+      if(res && res.ok) showToast('备份已保存到 ' + res.path);
+      else if(!res || !res.canceled) showToast('导出失败：' + (res && res.error ? res.error : '未知错误'));
+    }catch(e){ showToast('导出失败'); }
+  }else if(window.pywebview && window.pywebview.api && window.pywebview.api.export_backup){
     try{
       const res = await window.pywebview.api.export_backup(jsonStr);
       if(res && res.ok) showToast('备份已保存到 ' + res.path);
@@ -833,7 +896,13 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
 });
 
 document.getElementById('importBtn').addEventListener('click', async ()=>{
-  if(window.pywebview && window.pywebview.api && window.pywebview.api.import_backup){
+  if(window.electronAPI){
+    try{
+      const res = await window.electronAPI.importBackup();
+      if(res && res.ok) applyImportedCards(res.content, false);
+      else if(!res || !res.canceled) showToast('导入失败：' + (res && res.error ? res.error : '未知错误'));
+    }catch(e){ showToast('导入失败'); }
+  }else if(window.pywebview && window.pywebview.api && window.pywebview.api.import_backup){
     try{
       const res = await window.pywebview.api.import_backup();
       if(res && res.ok) applyImportedCards(res.content, false);
