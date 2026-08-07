@@ -99,6 +99,13 @@
   }
   .btn-ghost:hover{ border-color: var(--gold-dim); }
 
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .cat-chip{
+    font-size:12.5px; padding:6px 13px; border-radius:99px; cursor:pointer;
+    background: var(--panel); border:1px solid var(--line); color: var(--muted);
+  }
+  .cat-chip.active{ background: var(--gold); border-color: var(--gold); color:#1a1408; font-weight:600; }
+
   /* Card grid */
   .grid{
     display:grid;
@@ -132,9 +139,9 @@
   .theme-slate{ background: linear-gradient(135deg, #3a4661, #1b2333); }
   .theme-copper{ background: linear-gradient(135deg, #8a5330, #402314); }
 
-  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; }
-  .card-label{ font-size:13.5px; font-weight:600; color:#fff; opacity:0.92; }
-  .chip{ width:34px; height:25px; border-radius:5px; background: linear-gradient(135deg,#e7d9a8,#b89a55); position:relative; }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .card-label{ font-size:13.5px; font-weight:600; color:#fff; opacity:0.92; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chip{ width:34px; height:25px; border-radius:5px; background: linear-gradient(135deg,#e7d9a8,#b89a55); position:relative; flex-shrink:0; }
   .chip::before{
     content:""; position:absolute; inset:4px;
     border:1px solid rgba(0,0,0,0.25); border-radius:3px;
@@ -144,11 +151,18 @@
     font-family:var(--font-mono);
     font-size:16.5px; letter-spacing:2px; color:#fff; opacity:0.95;
   }
-  .card-bottom{ display:flex; justify-content:space-between; align-items:flex-end; }
-  .card-holder{ font-size:11.5px; letter-spacing:0.5px; text-transform:uppercase; color:rgba(255,255,255,0.75); }
-  .card-expiry{ font-family:var(--font-mono); font-size:12.5px; color:rgba(255,255,255,0.75); }
-  .card-bank{ position:absolute; top:18px; right:20px; font-size:11px; color:rgba(255,255,255,0.55); font-weight:500; }
+  .card-bottom{ display:flex; justify-content:space-between; align-items:flex-end; gap:8px; }
+  .card-holder{ font-size:11.5px; letter-spacing:0.5px; text-transform:uppercase; color:rgba(255,255,255,0.75); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-expiry{ font-family:var(--font-mono); font-size:12.5px; color:rgba(255,255,255,0.75); white-space:nowrap; flex-shrink:0; }
+  .card-expiry.exp-expired{ color:#f5a3a3; font-weight:600; }
+  .card-expiry.exp-soon{ color:#f0c48a; font-weight:600; }
+  .card-bank{ font-size:11px; color:rgba(255,255,255,0.55); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:38%; text-align:right; flex-shrink:0; }
   .brand-badge{ font-size:11px; font-weight:700; color:rgba(255,255,255,0.85); letter-spacing:0.5px; }
+  .pin-btn{
+    background:none; border:none; padding:0; margin-right:6px; cursor:pointer;
+    display:flex; align-items:center; flex-shrink:0;
+  }
+  .pin-btn svg{ transition: fill .15s ease, stroke .15s ease; }
 
   /* Empty state */
   .empty{
@@ -184,12 +198,14 @@
   .modal h2{ font-family:var(--font-display); margin:0 0 18px; font-size:18px; }
   .field{ margin-bottom:14px; }
   .field label{ display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px; font-weight:500; }
-  .field input, .field textarea{
+  .field input, .field textarea, .field select{
     width:100%; background: var(--panel-hi); border:1px solid var(--line);
     border-radius:9px; padding:10px 12px; color:var(--text); font-size:14px;
     font-family:var(--font-ui);
   }
-  .field input:focus, .field textarea:focus{ outline:none; border-color: var(--gold-dim); }
+  .field input:focus, .field textarea:focus, .field select:focus{ outline:none; border-color: var(--gold-dim); }
+  .field-warn{ font-size:12px; color:#e0a352; margin-top:5px; display:none; }
+  .field-warn.show{ display:block; }
   .field-row{ display:flex; gap:12px; }
   .field-row .field{ flex:1; }
   .swatches{ display:flex; gap:10px; margin-top:4px; }
@@ -255,6 +271,12 @@
 
   <div class="toolbar">
     <input class="search" id="searchInput" placeholder="搜索卡片名称 / 银行 / 持卡人...">
+    <select class="btn-ghost" id="sortSelect" style="appearance:auto; padding:11px 10px;">
+      <option value="pinned">置顶优先</option>
+      <option value="recent">最近添加</option>
+      <option value="name">按名称</option>
+      <option value="bank">按银行</option>
+    </select>
     <span id="cardCount" style="align-self:center; font-size:12.5px; color:var(--muted); white-space:nowrap;"></span>
     <button class="btn-ghost" id="exportBtn">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -270,6 +292,8 @@
       添加卡片
     </button>
   </div>
+
+  <div class="chip-row" id="categoryChips"></div>
 
   <div class="grid" id="cardGrid"></div>
 
@@ -288,6 +312,7 @@
     <div class="field">
       <label>卡号</label>
       <input id="f_number" placeholder="1234 5678 9012 3456" inputmode="numeric">
+      <div class="field-warn" id="numberWarn">⚠ 卡号校验位不匹配，请确认是否输入正确</div>
     </div>
     <div class="field-row">
       <div class="field">
@@ -308,6 +333,15 @@
         <label>发卡行</label>
         <input id="f_bank" placeholder="例如：招商银行">
       </div>
+    </div>
+    <div class="field">
+      <label>分类</label>
+      <select id="f_category">
+        <option value="信用卡">信用卡</option>
+        <option value="储蓄卡">储蓄卡</option>
+        <option value="虚拟卡">虚拟卡</option>
+        <option value="其他">其他</option>
+      </select>
     </div>
     <div class="field">
       <label>备注（可选）</label>
@@ -394,45 +428,112 @@ function copyText(text, label){
   navigator.clipboard.writeText(text).then(()=> showToast(label + ' 已复制'));
 }
 
+function checkExpiry(expiry){
+  if(!expiry || !/^\d{2}\/\d{2}$/.test(expiry)) return 'ok';
+  const [mm, yy] = expiry.split('/').map(Number);
+  const expDate = new Date(2000+yy, mm, 0); // last day of that month
+  const now = new Date();
+  const daysLeft = (expDate - now) / (1000*60*60*24);
+  if(daysLeft < 0) return 'expired';
+  if(daysLeft < 60) return 'soon';
+  return 'ok';
+}
+
+function luhnValid(num){
+  const clean = (num||'').replace(/\D/g,'');
+  if(clean.length < 12) return true; // too short to judge, don't warn
+  let sum = 0, alt = false;
+  for(let i=clean.length-1; i>=0; i--){
+    let d = parseInt(clean[i], 10);
+    if(alt){ d *= 2; if(d>9) d -= 9; }
+    sum += d; alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+function renderCategoryChips(){
+  const cats = ['全部', ...Array.from(new Set(cards.map(c=>c.category).filter(Boolean)))];
+  const row = document.getElementById('categoryChips');
+  if(cards.length === 0){ row.innerHTML=''; return; }
+  row.innerHTML = cats.map(cat => `<span class="cat-chip ${activeCategory===cat ? 'active':''}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</span>`).join('');
+  row.querySelectorAll('.cat-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      activeCategory = chip.dataset.cat;
+      renderGrid();
+    });
+  });
+}
+
+let activeCategory = '全部';
+
 function renderGrid(){
   const grid = document.getElementById('cardGrid');
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  const filtered = cards.filter(c=>{
-    if(!q) return true;
-    return (c.label||'').toLowerCase().includes(q) ||
+  const sortMode = document.getElementById('sortSelect').value;
+
+  let filtered = cards.filter(c=>{
+    const matchesQ = !q || (c.label||'').toLowerCase().includes(q) ||
            (c.bank||'').toLowerCase().includes(q) ||
            (c.holder||'').toLowerCase().includes(q);
+    const matchesCat = activeCategory === '全部' || c.category === activeCategory;
+    return matchesQ && matchesCat;
   });
+
+  if(sortMode === 'name') filtered.sort((a,b)=> (a.label||'').localeCompare(b.label||''));
+  else if(sortMode === 'bank') filtered.sort((a,b)=> (a.bank||'').localeCompare(b.bank||''));
+  else if(sortMode === 'recent') filtered.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  else filtered.sort((a,b)=> (b.pinned?1:0) - (a.pinned?1:0) || (b.createdAt||0) - (a.createdAt||0));
+
   const counter = document.getElementById('cardCount');
   if(counter) counter.textContent = cards.length ? `共 ${cards.length} 张卡片` : '';
+  renderCategoryChips();
 
   if(filtered.length === 0){
     grid.innerHTML = `<div class="empty">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="#8590a6" stroke-width="1.5"/><path d="M3 10h18" stroke="#8590a6" stroke-width="1.5"/></svg>
       <h3>${cards.length === 0 ? '还没有卡片' : '没有找到匹配的卡片'}</h3>
-      <p>${cards.length === 0 ? '点击右上方"添加卡片"开始记录' : '换个关键词试试'}</p>
+      <p>${cards.length === 0 ? '点击右上方"添加卡片"开始记录' : '换个关键词或分类试试'}</p>
     </div>`;
     return;
   }
 
-  grid.innerHTML = filtered.map(c => `
+  grid.innerHTML = filtered.map(c => {
+    const exp = checkExpiry(c.expiry);
+    const bankLine = [c.bank, c.category].filter(Boolean).join(' · ');
+    return `
     <div class="card ${c.theme || 'theme-midnight'}" data-id="${c.id}">
-      <div class="card-bank">${escapeHtml(c.bank||'')}</div>
       <div class="card-top">
-        <div class="card-label">${escapeHtml(c.label||'未命名卡片')}</div>
-        ${detectBrand(c.number) ? `<div class="brand-badge">${detectBrand(c.number)}</div>` : ''}
+        <span style="display:flex;align-items:center; min-width:0;">
+          <button class="pin-btn" data-pin="${c.id}" title="${c.pinned?'取消置顶':'置顶'}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="${c.pinned ? '#c9a24b' : 'none'}"><path d="m12 2 2.6 6.2L21 9l-5 4.6L17.4 21 12 17.3 6.6 21 8 13.6 3 9l6.4-.8Z" stroke="${c.pinned ? '#c9a24b' : 'rgba(255,255,255,0.55)'}" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="card-label">${escapeHtml(c.label||'未命名卡片')}</div>
+        </span>
+        <div class="card-bank">${escapeHtml(bankLine)}</div>
       </div>
       <div>
-        <div class="chip" style="margin-bottom:10px;"></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <div class="chip"></div>
+          ${detectBrand(c.number) ? `<div class="brand-badge">${detectBrand(c.number)}</div>` : ''}
+        </div>
         <div class="card-number">${maskNumber(c.number)}</div>
       </div>
       <div class="card-bottom">
         <div class="card-holder">${escapeHtml(c.holder||'')}</div>
-        <div class="card-expiry">${escapeHtml(c.expiry||'')}</div>
+        <div class="card-expiry ${exp==='expired'?'exp-expired':exp==='soon'?'exp-soon':''}">${exp==='expired' ? '已过期 · ' : exp==='soon' ? '⚠ ' : ''}${escapeHtml(c.expiry||'')}</div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
+  grid.querySelectorAll('.pin-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = btn.dataset.pin;
+      const c = cards.find(x=>x.id===id);
+      if(c){ c.pinned = !c.pinned; saveCards(); renderGrid(); }
+    });
+  });
   grid.querySelectorAll('.card').forEach(el=>{
     el.addEventListener('click', ()=> openDetail(el.dataset.id));
   });
@@ -452,10 +553,13 @@ function openAddForm(){
   document.getElementById('formTitle').textContent = '添加卡片';
   document.getElementById('editId').value = '';
   ['f_label','f_number','f_holder','f_expiry','f_cvv','f_bank','f_note'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('f_category').value = '信用卡';
+  document.getElementById('numberWarn').classList.remove('show');
   selectedTheme = 'theme-midnight';
   updateSwatchSelection();
   document.getElementById('deleteBtn').style.display = 'none';
   formOverlay.classList.add('show');
+  setTimeout(()=> document.getElementById('f_label').focus(), 50);
 }
 
 function openEditForm(id){
@@ -470,6 +574,8 @@ function openEditForm(id){
   document.getElementById('f_cvv').value = c.cvv||'';
   document.getElementById('f_bank').value = c.bank||'';
   document.getElementById('f_note').value = c.note||'';
+  document.getElementById('f_category').value = c.category || '信用卡';
+  document.getElementById('numberWarn').classList.remove('show');
   selectedTheme = c.theme || 'theme-midnight';
   updateSwatchSelection();
   document.getElementById('deleteBtn').style.display = 'block';
@@ -492,6 +598,11 @@ document.getElementById('swatches').addEventListener('click', (e)=>{
 document.getElementById('f_number').addEventListener('input', (e)=>{
   let v = e.target.value.replace(/[^\d]/g,'').slice(0,19);
   e.target.value = v.replace(/(.{4})/g,'$1 ').trim();
+  document.getElementById('numberWarn').classList.remove('show');
+});
+document.getElementById('f_number').addEventListener('blur', (e)=>{
+  const warn = document.getElementById('numberWarn');
+  warn.classList.toggle('show', e.target.value.trim() !== '' && !luhnValid(e.target.value));
 });
 document.getElementById('f_expiry').addEventListener('input', (e)=>{
   let v = e.target.value.replace(/[^\d]/g,'').slice(0,4);
@@ -529,6 +640,7 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     cvv: document.getElementById('f_cvv').value.trim(),
     bank: document.getElementById('f_bank').value.trim(),
     note: document.getElementById('f_note').value.trim(),
+    category: document.getElementById('f_category').value,
     theme: selectedTheme
   };
   if(editId){
@@ -536,7 +648,7 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     if(idx>-1) cards[idx] = {...cards[idx], ...data};
     showToast('已更新');
   }else{
-    cards.push({id: uid(), ...data});
+    cards.push({id: uid(), pinned:false, createdAt: Date.now(), ...data});
     showToast('已添加');
   }
   saveCards();
@@ -629,49 +741,73 @@ document.getElementById('editFromDetailBtn').addEventListener('click', ()=>{
 
 /* ---- Search ---- */
 document.getElementById('searchInput').addEventListener('input', renderGrid);
+document.getElementById('sortSelect').addEventListener('change', renderGrid);
 
-/* ---- Export / Import ---- */
-document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(cards, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'card-vault-backup-' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('备份已导出');
+/* ---- Export / Import ----
+   在桌面版(pywebview)中使用原生文件对话框，因为浏览器的
+   <a download> 下载方式在 pywebview 窗口里经常不生效。
+   如果是在普通浏览器里打开这个文件，则自动回退到浏览器下载方式。 */
+
+function applyImportedCards(text, silent){
+  try{
+    const imported = JSON.parse(text);
+    if(!Array.isArray(imported)) throw new Error('格式不正确');
+    const mode = silent ? true : confirm('点击"确定"合并到现有数据，点击"取消"则替换全部现有数据');
+    if(mode){
+      const existingIds = new Set(cards.map(c=>c.id));
+      imported.forEach(c=>{
+        if(!c.id || existingIds.has(c.id)) c.id = uid();
+        cards.push(c);
+      });
+    }else{
+      cards = imported.map(c=> ({...c, id: c.id || uid()}));
+    }
+    saveCards();
+    renderGrid();
+    showToast('导入成功，共 ' + imported.length + ' 张');
+  }catch(err){
+    showToast('导入失败：文件格式不正确');
+  }
+}
+
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
+  const jsonStr = JSON.stringify(cards, null, 2);
+  if(window.pywebview && window.pywebview.api && window.pywebview.api.export_backup){
+    try{
+      const res = await window.pywebview.api.export_backup(jsonStr);
+      if(res && res.ok) showToast('备份已保存到 ' + res.path);
+      else if(!res || !res.canceled) showToast('导出失败：' + (res && res.error ? res.error : '未知错误'));
+    }catch(e){ showToast('导出失败'); }
+  }else{
+    const blob = new Blob([jsonStr], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'card-vault-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('备份已导出');
+  }
 });
 
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  document.getElementById('importFile').click();
+document.getElementById('importBtn').addEventListener('click', async ()=>{
+  if(window.pywebview && window.pywebview.api && window.pywebview.api.import_backup){
+    try{
+      const res = await window.pywebview.api.import_backup();
+      if(res && res.ok) applyImportedCards(res.content, false);
+      else if(!res || !res.canceled) showToast('导入失败：' + (res && res.error ? res.error : '未知错误'));
+    }catch(e){ showToast('导入失败'); }
+  }else{
+    document.getElementById('importFile').click();
+  }
 });
 document.getElementById('importFile').addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = (ev)=>{
-    try{
-      const imported = JSON.parse(ev.target.result);
-      if(!Array.isArray(imported)) throw new Error('格式不正确');
-      const mode = confirm('点击"确定"合并到现有数据，点击"取消"则替换全部现有数据');
-      if(mode){
-        const existingIds = new Set(cards.map(c=>c.id));
-        imported.forEach(c=>{
-          if(!c.id || existingIds.has(c.id)) c.id = uid();
-          cards.push(c);
-        });
-      }else{
-        cards = imported.map(c=> ({...c, id: c.id || uid()}));
-      }
-      saveCards();
-      renderGrid();
-      showToast('导入成功');
-    }catch(err){
-      showToast('导入失败：文件格式不正确');
-    }
-    e.target.value = '';
-  };
+  reader.onload = (ev)=> applyImportedCards(ev.target.result, false);
   reader.readAsText(file);
+  e.target.value = '';
 });
 
 /* ---- Init ---- */
