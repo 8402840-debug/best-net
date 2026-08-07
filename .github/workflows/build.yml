@@ -19,19 +19,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install pyinstaller pythonnet
+          pip install pyinstaller
 
       - name: Build exe
         run: |
-          pyinstaller --onedir --windowed --name CardVault --icon "icon.ico" --add-data "card-vault.html;." --hidden-import webview.platforms.edgechromium --hidden-import clr_loader --collect-all webview --collect-all clr_loader app.py
-
-      - name: Zip build output
-        run: |
-          Compress-Archive -Path dist/CardVault/* -DestinationPath dist/CardVault-windows.zip
+          pyinstaller --onefile --console --name CardVault --icon "icon.ico" --add-data "card-vault.html;." app.py
 
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
         with:
           name: CardVault-exe
-          path: dist/CardVault-windows.zip
+          path: dist/CardVault.exe
