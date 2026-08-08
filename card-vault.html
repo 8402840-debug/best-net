@@ -370,6 +370,30 @@
   </div>
 </div>
 
+<!-- 通用确认弹窗 -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal" style="max-width:340px;">
+    <h2 id="confirmTitle">确认</h2>
+    <p id="confirmMsg" style="font-size:13px; color:var(--text-dim); line-height:1.6; margin:0 0 18px;"></p>
+    <div class="modal-actions" id="confirmActions"></div>
+  </div>
+</div>
+
+<!-- 设置主密码弹窗 -->
+<div class="overlay" id="pwSetupOverlay">
+  <div class="modal" style="max-width:340px;">
+    <h2>设置主密码</h2>
+    <div class="field"><label>主密码</label><input type="password" id="pwSetup1" autocomplete="off"></div>
+    <div class="field"><label>再次输入确认</label><input type="password" id="pwSetup2" autocomplete="off"></div>
+    <div class="err" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:6px;" id="pwSetupErr"></div>
+    <p style="font-size:11.5px; color:var(--text-dim); margin:0 0 16px;">请牢记这个密码，如果忘记将无法找回已加密的数据。</p>
+    <div class="modal-actions">
+      <button class="btn" id="pwSetupCancel">取消</button>
+      <button class="btn btn-primary" id="pwSetupConfirm">确定</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -627,6 +651,50 @@ function renderGrid(){
   });
 }
 
+/* ================== 自定义弹窗（替代不可靠的 window.confirm/prompt） ================== */
+function askConfirm(message, title){
+  return new Promise((resolve)=>{
+    const overlay = document.getElementById('confirmOverlay');
+    document.getElementById('confirmTitle').textContent = title || '确认';
+    document.getElementById('confirmMsg').textContent = message;
+    const actions = document.getElementById('confirmActions');
+    actions.innerHTML = `<button class="btn" id="confirmNo">取消</button><button class="btn btn-primary" id="confirmYes">确定</button>`;
+    const cleanup = (result)=>{ overlay.classList.remove('show'); resolve(result); };
+    document.getElementById('confirmNo').addEventListener('click', ()=> cleanup(false));
+    document.getElementById('confirmYes').addEventListener('click', ()=> cleanup(true));
+    overlay.classList.add('show');
+  });
+}
+
+function askNewPassword(){
+  return new Promise((resolve)=>{
+    const overlay = document.getElementById('pwSetupOverlay');
+    const p1 = document.getElementById('pwSetup1');
+    const p2 = document.getElementById('pwSetup2');
+    const err = document.getElementById('pwSetupErr');
+    p1.value = ''; p2.value = ''; err.textContent = '';
+    overlay.classList.add('show');
+    setTimeout(()=> p1.focus(), 50);
+
+    function cleanup(result){
+      overlay.classList.remove('show');
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onConfirm(){
+      if(!p1.value){ err.textContent = '请输入密码'; return; }
+      if(p1.value !== p2.value){ err.textContent = '两次输入不一致'; return; }
+      cleanup(p1.value);
+    }
+    function onCancel(){ cleanup(null); }
+    const confirmBtn = document.getElementById('pwSetupConfirm');
+    const cancelBtn = document.getElementById('pwSetupCancel');
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
 /* ================== 主题 ================== */
 function applyTheme(theme){
   document.body.dataset.theme = theme;
@@ -686,16 +754,15 @@ settingsOverlay.addEventListener('click', (e)=>{ if(e.target===settingsOverlay) 
 
 document.getElementById('toggleEncryptionBtn').addEventListener('click', async ()=>{
   if(encryptionEnabled){
-    if(confirm('关闭加密后，数据将以明文保存在本地，确定关闭吗？')){
+    const ok = await askConfirm('关闭加密后，数据将以明文保存在本地，确定关闭吗？', '关闭加密');
+    if(ok){
       disableEncryption();
       renderStatusPill(); refreshEncUI();
       showToast('已关闭加密');
     }
   }else{
-    const pw = prompt('设置一个主密码（请牢记，丢失无法找回数据）：');
+    const pw = await askNewPassword();
     if(!pw) return;
-    const pw2 = prompt('再次输入确认：');
-    if(pw !== pw2){ showToast('两次输入不一致'); return; }
     await enableEncryption(pw);
     renderStatusPill(); refreshEncUI();
     showToast('已启用加密');
@@ -793,7 +860,8 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
 });
 document.getElementById('deleteBtn').addEventListener('click', async ()=>{
   const editId = document.getElementById('editId').value; if(!editId) return;
-  if(confirm('确定要删除这张卡片吗？此操作无法撤销。')){
+  const ok = await askConfirm('确定要删除这张卡片吗？此操作无法撤销。', '删除卡片');
+  if(ok){
     cards = cards.filter(c=>c.id!==editId);
     await persist(); renderGrid();
     formOverlay.classList.remove('show');
@@ -935,18 +1003,19 @@ function applyImportedText(text){
     const importedCards = Array.isArray(parsed) ? parsed : (parsed.cards || []);
     const importedCats = Array.isArray(parsed) ? [] : (parsed.categories || []);
     if(!Array.isArray(importedCards)) throw new Error('格式不正确');
-    const mode = confirm('点击"确定"合并到现有数据，点击"取消"则替换全部现有数据');
-    if(mode){
-      const existingIds = new Set(cards.map(c=>c.id));
-      importedCards.forEach(c=>{ if(!c.id || existingIds.has(c.id)) c.id = uid(); cards.push(c); });
-      importedCats.forEach(cat=>{ if(!categories.includes(cat)) categories.push(cat); });
-    }else{
-      cards = importedCards.map(c=>({...c, id:c.id||uid()}));
-      if(importedCats.length) categories = importedCats;
-    }
-    persist();
-    renderGrid();
-    showToast('导入成功，共 ' + importedCards.length + ' 张');
+    askConfirm('点击"确定"合并到现有数据，点击"取消"则替换全部现有数据', '导入方式').then(async (mode)=>{
+      if(mode){
+        const existingIds = new Set(cards.map(c=>c.id));
+        importedCards.forEach(c=>{ if(!c.id || existingIds.has(c.id)) c.id = uid(); cards.push(c); });
+        importedCats.forEach(cat=>{ if(!categories.includes(cat)) categories.push(cat); });
+      }else{
+        cards = importedCards.map(c=>({...c, id:c.id||uid()}));
+        if(importedCats.length) categories = importedCats;
+      }
+      await persist();
+      renderGrid();
+      showToast('导入成功，共 ' + importedCards.length + ' 张');
+    });
   }catch(err){
     showToast('导入失败：文件格式不正确');
   }
