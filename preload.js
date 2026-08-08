@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  exportBackup: (jsonStr) => ipcRenderer.invoke('export-backup', jsonStr),
-  importBackup: () => ipcRenderer.invoke('import-backup'),
+  saveFile: (content, defaultName, filters) =>
+    ipcRenderer.invoke('save-file', { content, defaultName, filters }),
+  openFile: (filters) => ipcRenderer.invoke('open-file', { filters }),
 });

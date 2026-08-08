@@ -1,0 +1,12 @@
+{
+  "name": "card-vault-mobile",
+  "version": "1.0.0",
+  "description": "卡片保险柜 - 安卓版",
+  "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

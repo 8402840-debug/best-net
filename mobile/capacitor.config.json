@@ -1,0 +1,9 @@
+{
+  "appId": "com.cardvault.app",
+  "appName": "卡片保险柜",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": false
+  }
+}
