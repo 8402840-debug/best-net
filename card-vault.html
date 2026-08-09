@@ -34,7 +34,10 @@
   html,body{ height:100%; }
   body{
     margin:0;
-    background: var(--bg);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(212,165,116,0.10), transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, rgba(120,140,255,0.06), transparent 50%),
+      var(--bg);
     color: var(--text);
     font-family: var(--font-ui);
     -webkit-font-smoothing: antialiased;
@@ -46,7 +49,7 @@
   /* Header */
   header{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom: 6px; }
   .brand{ display:flex; align-items:center; gap:12px; }
-  .brand h1{ font-size: 19px; font-weight:700; margin:0; letter-spacing:-0.2px; }
+  .brand h1{ font-size: 23px; font-weight:700; margin:0; letter-spacing:-0.4px; }
   .brand p{ margin:2px 0 0; font-size:12px; color: var(--text-dim); }
   .accent-line{
     height:2px; width:46px; margin-top:6px; border-radius:2px;
@@ -77,10 +80,11 @@
   /* Stats */
   .stats-row{ display:flex; gap:10px; flex-wrap:wrap; margin: 22px 0 4px; }
   .stat-pill{
-    background: var(--surface); border:1px solid var(--border); border-radius:11px;
-    padding:11px 16px; font-size:12.5px; color:var(--text-dim); display:flex; align-items:baseline; gap:7px;
+    background: var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:12px 18px; font-size:12.5px; color:var(--text-dim); display:flex; align-items:baseline; gap:7px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
-  .stat-pill b{ font-size:18px; color: var(--text); font-family:var(--font-mono); font-weight:600; }
+  .stat-pill b{ font-size:19px; color: var(--text); font-family:var(--font-mono); font-weight:700; }
   .stat-pill.warn b{ color: var(--warn); }
   .stat-pill.danger b{ color: var(--danger); }
 
@@ -101,15 +105,16 @@
   .btn{
     background: var(--surface); border:1px solid var(--border); color: var(--text);
     padding: 10px 15px; border-radius:10px; font-size:13px; font-weight:500;
-    display:flex; align-items:center; gap:7px; transition: border-color .15s ease;
+    display:flex; align-items:center; gap:7px; transition: border-color .15s ease, transform .1s ease, background .15s ease;
   }
-  .btn:hover{ border-color: var(--accent); }
+  .btn:hover{ border-color: var(--accent); background: var(--surface-2); }
+  .btn:active{ transform: scale(.97); }
   .btn-primary{
-    background: var(--accent); color:#1a1408; font-weight:600; border:1px solid var(--accent);
-    position:relative; overflow:hidden;
+    background: linear-gradient(135deg, var(--accent), #b98a52); color:#1a1408; font-weight:700; border:1px solid transparent;
+    position:relative; overflow:hidden; box-shadow: 0 4px 14px rgba(212,165,116,0.28);
   }
-  .btn-primary:hover{ filter:brightness(1.06); }
-  .btn-primary:active{ transform: translateY(1px); }
+  .btn-primary:hover{ filter:brightness(1.08); box-shadow: 0 6px 20px rgba(212,165,116,0.4); }
+  .btn-primary:active{ transform: translateY(1px) scale(.98); }
 
   .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
   .cat-chip{
@@ -120,16 +125,24 @@
   .cat-chip.active{ background: var(--accent); border-color: var(--accent); color:#1a1408; font-weight:600; }
 
   /* Grid */
-  .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap:16px; }
+  .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap:18px; }
   .card{
-    position:relative; border-radius:15px; padding:19px 19px 15px; height:168px;
+    position:relative; border-radius:16px; padding:20px 20px 16px; height:170px;
     display:flex; flex-direction:column; justify-content:space-between; cursor:pointer;
-    border:1px solid rgba(255,255,255,0.08); box-shadow: 0 6px 18px rgba(0,0,0,0.3);
-    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-    overflow:hidden; animation: cardIn .2s ease both;
+    border:1px solid rgba(255,255,255,0.09); box-shadow: 0 10px 24px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease, border-color .2s ease;
+    overflow:hidden; animation: cardIn .22s ease both;
   }
-  @keyframes cardIn{ from{ opacity:0; transform: translateY(6px); } to{ opacity:1; transform:none; } }
-  .card:hover{ transform: translateY(-3px); box-shadow: 0 14px 26px rgba(0,0,0,0.4); border-color: rgba(212,165,116,0.4); }
+  .card::after{
+    content:""; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+    background: linear-gradient(160deg, rgba(255,255,255,0.07), transparent 45%);
+  }
+  @keyframes cardIn{ from{ opacity:0; transform: translateY(8px) scale(.98); } to{ opacity:1; transform:none; } }
+  .card:hover{
+    transform: translateY(-5px) scale(1.012);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,165,116,0.25), 0 0 24px rgba(212,165,116,0.12);
+    border-color: rgba(212,165,116,0.55);
+  }
   .theme-midnight{ background: linear-gradient(135deg, #26324a, #131a29); }
   .theme-emerald{ background: linear-gradient(135deg, #0e5a45, #052b22); }
   .theme-plum{ background: linear-gradient(135deg, #5c2464, #250a2b); }
@@ -160,8 +173,8 @@
   .overlay{ position:fixed; inset:0; background: rgba(4,5,8,.68); display:none; align-items:center; justify-content:center; z-index:60; padding:20px; }
   .overlay.show{ display:flex; animation: fadeIn .14s ease; }
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
-  .modal{ background: var(--surface); border:1px solid var(--border); border-radius:15px; width:100%; max-width:440px; padding:24px; max-height:88vh; overflow-y:auto; animation: pop .15s ease; }
-  @keyframes pop{ from{ opacity:0; transform: scale(.97) translateY(5px); } to{ opacity:1; transform:none; } }
+  .modal{ background: var(--surface); border:1px solid var(--border); border-radius:18px; width:100%; max-width:440px; padding:26px; max-height:88vh; overflow-y:auto; animation: pop .18s cubic-bezier(.2,.8,.2,1); box-shadow: 0 24px 60px rgba(0,0,0,0.5); }
+  @keyframes pop{ from{ opacity:0; transform: scale(.95) translateY(8px); } to{ opacity:1; transform:none; } }
   .modal h2{ font-size:16px; margin:0 0 16px; font-weight:600; }
   .field{ margin-bottom:13px; }
   .field label{ display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:6px; }
@@ -331,8 +344,8 @@
     </div>
     <div class="field">
       <label>分类</label>
-      <input id="f_category" list="categoryDatalist" placeholder="选择或输入新分类">
-      <datalist id="categoryDatalist"></datalist>
+      <select id="f_category_select"></select>
+      <input id="f_category_new" placeholder="输入新分类名称" style="display:none; margin-top:8px;">
     </div>
     <div class="field"><label>备注（可选）</label><textarea id="f_note" rows="2" placeholder="附加信息..."></textarea></div>
     <div class="field">
@@ -709,7 +722,40 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
 
 /* ================== 分类管理 ================== */
 function renderCategoryDatalist(){
-  document.getElementById('categoryDatalist').innerHTML = categories.map(c=>`<option value="${escapeHtml(c)}">`).join('');
+  // 已改用下拉选择框，此函数保留为兼容旧调用点，实际渲染见 renderCategorySelect()
+}
+function renderCategorySelect(selectedValue){
+  const sel = document.getElementById('f_category_select');
+  const newInput = document.getElementById('f_category_new');
+  sel.innerHTML = categories.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') + `<option value="__new__">+ 新建分类...</option>`;
+  if(selectedValue && categories.includes(selectedValue)){
+    sel.value = selectedValue;
+    newInput.style.display = 'none';
+  }else if(selectedValue){
+    // 该卡片的分类不在当前分类列表里，直接展示为"新建"输入框内容
+    sel.value = '__new__';
+    newInput.style.display = 'block';
+    newInput.value = selectedValue;
+  }else{
+    sel.value = categories[0] || '__new__';
+    newInput.style.display = sel.value === '__new__' ? 'block' : 'none';
+    newInput.value = '';
+  }
+}
+document.getElementById('f_category_select').addEventListener('change', (e)=>{
+  const newInput = document.getElementById('f_category_new');
+  if(e.target.value === '__new__'){
+    newInput.style.display = 'block';
+    newInput.value = '';
+    newInput.focus();
+  }else{
+    newInput.style.display = 'none';
+  }
+});
+function getSelectedCategory(){
+  const sel = document.getElementById('f_category_select');
+  if(sel.value === '__new__') return document.getElementById('f_category_new').value.trim();
+  return sel.value;
 }
 function renderCatManager(){
   document.getElementById('catManager').innerHTML = categories.map(c=>`
@@ -785,11 +831,10 @@ function openAddForm(){
   document.getElementById('formTitle').textContent = '添加卡片';
   document.getElementById('editId').value = '';
   ['f_label','f_number','f_holder','f_expiry','f_cvv','f_bank','f_note'].forEach(id=> document.getElementById(id).value='');
-  document.getElementById('f_category').value = categories[0] || '';
   document.getElementById('numberWarn').classList.remove('show');
   selectedTheme = 'theme-midnight'; updateSwatchSelection();
   document.getElementById('deleteBtn').style.display = 'none';
-  renderCategoryDatalist();
+  renderCategorySelect(null);
   formOverlay.classList.add('show');
   setTimeout(()=> document.getElementById('f_label').focus(), 40);
 }
@@ -804,11 +849,10 @@ function openEditForm(id){
   document.getElementById('f_cvv').value = c.cvv||'';
   document.getElementById('f_bank').value = c.bank||'';
   document.getElementById('f_note').value = c.note||'';
-  document.getElementById('f_category').value = c.category || (categories[0]||'');
   document.getElementById('numberWarn').classList.remove('show');
   selectedTheme = c.theme||'theme-midnight'; updateSwatchSelection();
   document.getElementById('deleteBtn').style.display = 'block';
-  renderCategoryDatalist();
+  renderCategorySelect(c.category || null);
   formOverlay.classList.add('show');
 }
 document.getElementById('addBtn').addEventListener('click', openAddForm);
@@ -835,7 +879,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const number = document.getElementById('f_number').value.trim();
   if(!label || !number){ showToast('请填写卡片名称和卡号'); return; }
   const editId = document.getElementById('editId').value;
-  const category = document.getElementById('f_category').value.trim();
+  const category = getSelectedCategory();
   if(category && !categories.includes(category)) categories.push(category);
   const data = {
     label, number,
