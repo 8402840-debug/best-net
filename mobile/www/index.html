@@ -231,6 +231,15 @@
   }
   .type-opt.active{ background: var(--accent); color:#1a1408; border-color:var(--accent); font-weight:700; }
 
+  .topup-section{ margin-bottom:14px; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .topup-toggle{
+    display:flex; align-items:center; justify-content:space-between; padding:11px 13px;
+    cursor:pointer; font-size:13px; color:var(--text-dim); background: var(--surface-2);
+  }
+  .topup-toggle svg{ transition: transform .15s ease; }
+  .topup-toggle.open svg{ transform: rotate(180deg); }
+  .topup-body{ padding:14px 13px 4px; }
+
   /* 毛玻璃动态效果 */
   .toolbar .search, .sel, .btn, .stat-pill, .cat-chip{
     backdrop-filter: blur(10px) saturate(140%);
@@ -378,6 +387,30 @@
     <div class="field-row">
       <div class="field"><label>CVV</label><input id="f_cvv" placeholder="123" maxlength="4" inputmode="numeric"></div>
       <div class="field"><label>发卡行</label><input id="f_bank" placeholder="例如：招商银行"></div>
+    </div>
+    <div class="topup-section">
+      <div class="topup-toggle" id="topupToggle">
+        <span>💰 充值渠道（可选）</span>
+        <svg id="topupChevron" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="topup-body" id="topupBody" style="display:none;">
+        <div class="field-row">
+          <div class="field">
+            <label>虚拟币充值网络</label>
+            <select id="f_topup_network">
+              <option value="">不使用</option>
+              <option>USDT-TRC20</option>
+              <option>USDT-ERC20</option>
+              <option>USDT-BEP20</option>
+              <option>BTC</option>
+              <option>ETH</option>
+              <option>其他</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>虚拟币充值地址</label><input id="f_topup_address" placeholder="粘贴充值地址..." style="font-family:var(--font-mono); font-size:12.5px;"></div>
+        <div class="field"><label>银行充值ID/账号</label><input id="f_topup_bankid" placeholder="用于银行转账充值的账号/参考ID"></div>
+      </div>
     </div>
     </div>
     <div id="walletFields" style="display:none;">
@@ -3215,7 +3248,10 @@ function setFormType(type){
 function openAddForm(){
   document.getElementById('formTitle').textContent = '添加卡片';
   document.getElementById('editId').value = '';
-  ['f_label','f_number','f_holder','f_expiry','f_cvv','f_bank','f_note','w_label','w_address'].forEach(id=> document.getElementById(id).value='');
+  ['f_label','f_number','f_holder','f_expiry','f_cvv','f_bank','f_note','w_label','w_address','f_topup_address','f_topup_bankid'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('f_topup_network').value = '';
+  document.getElementById('topupBody').style.display = 'none';
+  document.getElementById('topupToggle').classList.remove('open');
   document.getElementById('numberWarn').classList.remove('show');
   selectedTheme = 'theme-midnight'; updateSwatchSelection();
   document.getElementById('deleteBtn').style.display = 'none';
@@ -3242,6 +3278,12 @@ function openEditForm(id){
     document.getElementById('f_cvv').value = c.cvv||'';
     document.getElementById('f_bank').value = c.bank||'';
   }
+  document.getElementById('f_topup_network').value = c.topupNetwork || '';
+  document.getElementById('f_topup_address').value = c.topupAddress || '';
+  document.getElementById('f_topup_bankid').value = c.topupBankId || '';
+  const hasTopup = !!(c.topupNetwork || c.topupAddress || c.topupBankId);
+  document.getElementById('topupBody').style.display = hasTopup ? 'block' : 'none';
+  document.getElementById('topupToggle').classList.toggle('open', hasTopup);
   document.getElementById('f_note').value = c.note||'';
   document.getElementById('numberWarn').classList.remove('show');
   selectedTheme = c.theme||'theme-midnight'; updateSwatchSelection();
@@ -3253,6 +3295,13 @@ function openEditForm(id){
 document.getElementById('addBtn').addEventListener('click', openAddForm);
 document.getElementById('cancelBtn').addEventListener('click', ()=> formOverlay.classList.remove('show'));
 formOverlay.addEventListener('click', (e)=>{ if(e.target===formOverlay) formOverlay.classList.remove('show'); });
+
+document.getElementById('topupToggle').addEventListener('click', ()=>{
+  const body = document.getElementById('topupBody');
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('topupToggle').classList.toggle('open', !isOpen);
+});
 
 document.getElementById('typeSwitch').addEventListener('click', (e)=>{
   const opt = e.target.closest('.type-opt'); if(!opt) return;
@@ -3301,6 +3350,9 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
       cvv: document.getElementById('f_cvv').value.trim(),
       bank: document.getElementById('f_bank').value.trim(),
       note: document.getElementById('f_note').value.trim(),
+      topupNetwork: document.getElementById('f_topup_network').value,
+      topupAddress: document.getElementById('f_topup_address').value.trim(),
+      topupBankId: document.getElementById('f_topup_bankid').value.trim(),
       category, theme: selectedTheme
     };
   }
@@ -3404,6 +3456,8 @@ function renderDetail(c){
   rows.push(row('持卡人', c.holder||'—', c.holder, '持卡人', false));
   rows.push(row('发卡行', c.bank||'—', c.bank, '发卡行', false));
   if(c.category) rows.push(row('分类', c.category, c.category, '分类', false));
+  if(c.topupNetwork || c.topupAddress) rows.push(row('虚拟币充值('+escapeHtml(c.topupNetwork||'')+')', c.topupAddress||'—', c.topupAddress, '充值地址'));
+  if(c.topupBankId) rows.push(row('银行充值ID', c.topupBankId, c.topupBankId, '充值ID'));
   if(c.note) rows.push(row('备注', c.note, c.note, '备注', false));
 
   document.getElementById('detailRows').innerHTML = rows.join('') + `
