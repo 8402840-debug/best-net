@@ -240,6 +240,13 @@
   .topup-toggle.open svg{ transform: rotate(180deg); }
   .topup-body{ padding:14px 13px 4px; }
 
+  .currency-quick{ display:flex; gap:6px; flex-wrap:wrap; }
+  .curr-chip{
+    padding:7px 12px; border-radius:8px; background: var(--surface-2); border:1px solid var(--border);
+    color: var(--text-dim); font-size:12.5px; font-weight:600; cursor:pointer; transition: all .12s ease;
+  }
+  .curr-chip.active{ background: var(--accent); border-color: var(--accent); color:#1a1408; }
+
   .balance-box{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background: var(--surface-2); border-radius:12px; margin:14px 0; }
   .balance-box .amt{ font-family:var(--font-mono); font-size:22px; font-weight:700; }
   .balance-box .amt.neg{ color: var(--danger); }
@@ -410,7 +417,11 @@
     <div class="field-row">
       <div class="field"><label>CVV</label><input id="f_cvv" placeholder="123" maxlength="4" inputmode="numeric"></div>
       <div class="field"><label>发卡行</label><input id="f_bank" placeholder="例如：招商银行"></div>
-    <div class="field"><label>货币</label><select id="f_currency"></select></div>
+    <div class="field">
+      <label>货币</label>
+      <div class="currency-quick" id="currencyQuick"></div>
+      <select id="f_currency" style="margin-top:8px;"></select>
+    </div>
     </div>
     <div class="topup-section">
       <div class="topup-toggle" id="topupToggle">
@@ -2863,6 +2874,21 @@ function populateCurrencySelect(){
   if(sel.options.length) return; // 只需填充一次
   sel.innerHTML = CURRENCIES.map(c=>`<option value="${c.code}">${c.symbol} ${c.name} (${c.code})</option>`).join('');
 }
+const QUICK_CURRENCIES = ['CNY','USD','EUR','GBP','JPY','HKD','USDT','KRW'];
+function renderCurrencyQuick(selected){
+  const box = document.getElementById('currencyQuick');
+  box.innerHTML = QUICK_CURRENCIES.map(code=>{
+    const c = CURRENCIES.find(x=>x.code===code);
+    return `<span class="curr-chip ${selected===code?'active':''}" data-curr="${code}">${c.symbol} ${code}</span>`;
+  }).join('');
+  box.querySelectorAll('.curr-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.getElementById('f_currency').value = chip.dataset.curr;
+      renderCurrencyQuick(chip.dataset.curr);
+    });
+  });
+}
+document.getElementById('f_currency').addEventListener('change', (e)=> renderCurrencyQuick(e.target.value));
 
 let cards = [];
 let categories = [];
@@ -3390,6 +3416,7 @@ function openAddForm(){
   document.getElementById('f_topup_network').value = '';
   populateCurrencySelect();
   document.getElementById('f_currency').value = 'CNY';
+  renderCurrencyQuick('CNY');
   document.getElementById('topupBody').style.display = 'none';
   document.getElementById('topupToggle').classList.remove('open');
   document.getElementById('numberWarn').classList.remove('show');
@@ -3423,6 +3450,7 @@ function openEditForm(id){
   document.getElementById('f_topup_bankid').value = c.topupBankId || '';
   populateCurrencySelect();
   document.getElementById('f_currency').value = c.currency || 'CNY';
+  renderCurrencyQuick(c.currency || 'CNY');
   const hasTopup = !!(c.topupNetwork || c.topupAddress || c.topupBankId);
   document.getElementById('topupBody').style.display = hasTopup ? 'block' : 'none';
   document.getElementById('topupToggle').classList.toggle('open', hasTopup);
