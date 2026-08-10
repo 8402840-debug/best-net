@@ -116,11 +116,13 @@
   .btn-primary:hover{ filter:brightness(1.08); box-shadow: 0 6px 20px rgba(212,165,116,0.4); }
   .btn-primary:active{ transform: translateY(1px) scale(.98); }
 
-  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .chip-row{ display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:nowrap; scrollbar-width:thin; padding-bottom:4px; }
+  .chip-row::-webkit-scrollbar{ height:4px; }
+  .chip-row::-webkit-scrollbar-thumb{ background: var(--border); border-radius:4px; }
   .cat-chip{
     font-size:12px; padding:6px 13px; border-radius:99px; cursor:pointer;
     background: var(--surface); border:1px solid var(--border); color: var(--text-dim);
-    transition: all .12s ease;
+    transition: all .12s ease; white-space:nowrap; flex-shrink:0;
   }
   .cat-chip.active{ background: var(--accent); border-color: var(--accent); color:#1a1408; font-weight:600; }
 
@@ -434,9 +436,8 @@
       <div class="field"><label>发卡行</label><input id="f_bank" placeholder="例如：招商银行"></div>
     <div class="field">
       <label>货币</label>
-      <div class="currency-quick" id="currencyQuick"></div>
-      <div class="currency-search-wrap" style="position:relative; margin-top:8px;">
-        <input id="currencySearch" placeholder="搜索货币名称或代码，例如 泰铢 / THB" autocomplete="off">
+      <div class="currency-search-wrap" style="position:relative;">
+        <input id="currencySearch" placeholder="搜索货币，例如 泰铢 / THB / 美元" autocomplete="off">
         <div class="currency-results" id="currencyResults" style="display:none;"></div>
       </div>
       <select id="f_currency" style="display:none;"></select>
@@ -2894,24 +2895,12 @@ function populateCurrencySelect(){
   sel.innerHTML = CURRENCIES.map(c=>`<option value="${c.code}">${c.symbol} ${c.name} (${c.code})</option>`).join('');
 }
 const QUICK_CURRENCIES = ['CNY','USD','EUR','GBP','JPY','HKD','USDT','KRW'];
-function renderCurrencyQuick(selected){
-  const box = document.getElementById('currencyQuick');
-  box.innerHTML = QUICK_CURRENCIES.map(code=>{
-    const c = CURRENCIES.find(x=>x.code===code);
-    return `<span class="curr-chip ${selected===code?'active':''}" data-curr="${code}">${c.symbol} ${code}</span>`;
-  }).join('');
-  box.querySelectorAll('.curr-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=> setCurrencyValue(chip.dataset.curr));
-  });
-}
-document.getElementById('f_currency').addEventListener('change', (e)=> renderCurrencyQuick(e.target.value));
 
 /* ---- 货币自定义搜索下拉（不用原生datalist，兼容性更好）---- */
 function setCurrencyValue(code){
   document.getElementById('f_currency').value = code;
   const c = CURRENCIES.find(x=>x.code===code);
   document.getElementById('currencySearch').value = c ? `${c.symbol} ${c.name} (${c.code})` : code;
-  renderCurrencyQuick(code);
   document.getElementById('currencyResults').style.display = 'none';
 }
 function renderCurrencyResults(query){
