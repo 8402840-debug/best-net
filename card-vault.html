@@ -460,13 +460,13 @@
     <div class="field">
       <label>卡片颜色</label>
       <div class="swatches" id="swatches">
-        <div class="swatch theme-midnight selected" data-theme="theme-midnight"></div>
-        <div class="swatch theme-emerald" data-theme="theme-emerald"></div>
-        <div class="swatch theme-plum" data-theme="theme-plum"></div>
-        <div class="swatch theme-slate" data-theme="theme-slate"></div>
-        <div class="swatch theme-copper" data-theme="theme-copper"></div>
-        <div class="swatch theme-rosewood" data-theme="theme-rosewood"></div>
-        <div class="swatch theme-ink" data-theme="theme-ink"></div>
+        <div class="swatch theme-midnight selected" data-theme="theme-midnight" title="午夜蓝"></div>
+        <div class="swatch theme-emerald" data-theme="theme-emerald" title="祖母绿"></div>
+        <div class="swatch theme-plum" data-theme="theme-plum" title="紫罗兰"></div>
+        <div class="swatch theme-slate" data-theme="theme-slate" title="石板灰"></div>
+        <div class="swatch theme-copper" data-theme="theme-copper" title="古铜色"></div>
+        <div class="swatch theme-rosewood" data-theme="theme-rosewood" title="玫瑰木"></div>
+        <div class="swatch theme-ink" data-theme="theme-ink" title="墨黑"></div>
       </div>
     </div>
     <div class="modal-actions">
@@ -3553,11 +3553,11 @@ function renderDetail(c){
     </div>`;
 
   const rows = [];
-  const row = (label, display, copyVal, copyLabel, copyable=true) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
-    <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;">${label}</div>
-    <div style="display:flex;align-items:center;gap:4px;">
-      <div style="font-family:var(--font-mono);font-size:14px;">${escapeHtml(String(display))}</div>
-      ${copyable && copyVal ? `<button class="icon-btn" style="width:24px;height:24px;" data-copy="${escapeHtml(String(copyVal))}" data-copy-label="${copyLabel}">
+  const row = (label, display, copyVal, copyLabel, copyable=true) => `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+    <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;padding-top:2px;">${label}</div>
+    <div style="display:flex;align-items:flex-start;gap:4px;min-width:0;">
+      <div style="font-family:var(--font-mono);font-size:13.5px;word-break:break-all;text-align:right;" title="${escapeHtml(String(display))}">${escapeHtml(String(display))}</div>
+      ${copyable && copyVal ? `<button class="icon-btn" style="width:24px;height:24px;flex-shrink:0;" data-copy="${escapeHtml(String(copyVal))}" data-copy-label="${copyLabel}">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.5"/></svg>
       </button>` : ''}
     </div>
@@ -3570,9 +3570,23 @@ function renderDetail(c){
   if(c.category) rows.push(row('分类', c.category, c.category, '分类', false));
   if(c.topupNetwork || c.topupAddress) rows.push(row('虚拟币充值('+escapeHtml(c.topupNetwork||'')+')', c.topupAddress||'—', c.topupAddress, '充值地址'));
   if(c.topupBankId) rows.push(row('银行充值ID', c.topupBankId, c.topupBankId, '充值ID'));
+
+  let topupQrHtml = '';
+  if(c.topupAddress){
+    try{
+      const qr = qrcode(0, 'M');
+      qr.addData(c.topupAddress);
+      qr.make();
+      const svg = qr.createSvgTag({cellSize:3, margin:2});
+      topupQrHtml = `<div style="text-align:center; padding:14px 0;">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">虚拟币充值二维码</div>
+        <div class="qr-wrap" style="padding:10px;">${svg}</div>
+      </div>`;
+    }catch(e){}
+  }
   if(c.note) rows.push(row('备注', c.note, c.note, '备注', false));
 
-  document.getElementById('detailRows').innerHTML = rows.join('') + renderBalanceSection(c) + `
+  document.getElementById('detailRows').innerHTML = rows.join('') + topupQrHtml + renderBalanceSection(c) + `
     <div style="text-align:center;margin-top:14px;">
       <button class="btn" id="toggleRevealBtn">${revealed?'隐藏敏感信息':'显示卡号 / CVV'}</button>
     </div>`;
