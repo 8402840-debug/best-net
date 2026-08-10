@@ -246,6 +246,21 @@
     color: var(--text-dim); font-size:12.5px; font-weight:600; cursor:pointer; transition: all .12s ease;
   }
   .curr-chip.active{ background: var(--accent); border-color: var(--accent); color:#1a1408; }
+  .currency-search-wrap input{
+    width:100%; background: var(--surface-2); border:1px solid var(--border); border-radius:8px;
+    padding:9px 11px; color:var(--text); font-size:13.5px;
+  }
+  .currency-search-wrap input:focus{ outline:none; border-color: var(--accent); }
+  .currency-results{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:220px; overflow-y:auto;
+    background: var(--surface); border:1px solid var(--border); border-radius:10px; z-index:40;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+  }
+  .currency-result-item{
+    padding:9px 12px; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; color:var(--text);
+  }
+  .currency-result-item:hover{ background: var(--surface-2); }
+  .currency-result-item .sym{ color:var(--accent); font-weight:600; margin-right:8px; }
 
   .balance-box{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background: var(--surface-2); border-radius:12px; margin:14px 0; }
   .balance-box .amt{ font-family:var(--font-mono); font-size:22px; font-weight:700; }
@@ -420,7 +435,11 @@
     <div class="field">
       <label>货币</label>
       <div class="currency-quick" id="currencyQuick"></div>
-      <select id="f_currency" style="margin-top:8px;"></select>
+      <div class="currency-search-wrap" style="position:relative; margin-top:8px;">
+        <input id="currencySearch" placeholder="搜索货币名称或代码，例如 泰铢 / THB" autocomplete="off">
+        <div class="currency-results" id="currencyResults" style="display:none;"></div>
+      </div>
+      <select id="f_currency" style="display:none;"></select>
     </div>
     </div>
     <div class="topup-section">
@@ -2882,13 +2901,44 @@ function renderCurrencyQuick(selected){
     return `<span class="curr-chip ${selected===code?'active':''}" data-curr="${code}">${c.symbol} ${code}</span>`;
   }).join('');
   box.querySelectorAll('.curr-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      document.getElementById('f_currency').value = chip.dataset.curr;
-      renderCurrencyQuick(chip.dataset.curr);
-    });
+    chip.addEventListener('click', ()=> setCurrencyValue(chip.dataset.curr));
   });
 }
 document.getElementById('f_currency').addEventListener('change', (e)=> renderCurrencyQuick(e.target.value));
+
+/* ---- 货币自定义搜索下拉（不用原生datalist，兼容性更好）---- */
+function setCurrencyValue(code){
+  document.getElementById('f_currency').value = code;
+  const c = CURRENCIES.find(x=>x.code===code);
+  document.getElementById('currencySearch').value = c ? `${c.symbol} ${c.name} (${c.code})` : code;
+  renderCurrencyQuick(code);
+  document.getElementById('currencyResults').style.display = 'none';
+}
+function renderCurrencyResults(query){
+  const box = document.getElementById('currencyResults');
+  const q = query.trim().toLowerCase();
+  const matches = q
+    ? CURRENCIES.filter(c=> c.name.includes(query.trim()) || c.code.toLowerCase().includes(q))
+    : CURRENCIES;
+  if(matches.length === 0){
+    box.innerHTML = `<div class="currency-result-item" style="color:var(--text-dim);cursor:default;">没有匹配的货币</div>`;
+  }else{
+    box.innerHTML = matches.slice(0,12).map(c=>`
+      <div class="currency-result-item" data-curr="${c.code}"><span><span class="sym">${c.symbol}</span>${c.name}</span><span style="color:var(--text-dim);">${c.code}</span></div>
+    `).join('');
+    box.querySelectorAll('.currency-result-item[data-curr]').forEach(item=>{
+      item.addEventListener('click', ()=> setCurrencyValue(item.dataset.curr));
+    });
+  }
+  box.style.display = 'block';
+}
+document.getElementById('currencySearch').addEventListener('focus', (e)=> renderCurrencyResults(e.target.value));
+document.getElementById('currencySearch').addEventListener('input', (e)=> renderCurrencyResults(e.target.value));
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.currency-search-wrap')){
+    document.getElementById('currencyResults').style.display = 'none';
+  }
+});
 
 let cards = [];
 let categories = [];
@@ -3415,8 +3465,7 @@ function openAddForm(){
   ['f_label','f_number','f_holder','f_expiry','f_cvv','f_bank','f_note','w_label','w_address','f_topup_address','f_topup_bankid'].forEach(id=> document.getElementById(id).value='');
   document.getElementById('f_topup_network').value = '';
   populateCurrencySelect();
-  document.getElementById('f_currency').value = 'CNY';
-  renderCurrencyQuick('CNY');
+  setCurrencyValue('CNY');
   document.getElementById('topupBody').style.display = 'none';
   document.getElementById('topupToggle').classList.remove('open');
   document.getElementById('numberWarn').classList.remove('show');
@@ -3449,8 +3498,7 @@ function openEditForm(id){
   document.getElementById('f_topup_address').value = c.topupAddress || '';
   document.getElementById('f_topup_bankid').value = c.topupBankId || '';
   populateCurrencySelect();
-  document.getElementById('f_currency').value = c.currency || 'CNY';
-  renderCurrencyQuick(c.currency || 'CNY');
+  setCurrencyValue(c.currency || 'CNY');
   const hasTopup = !!(c.topupNetwork || c.topupAddress || c.topupBankId);
   document.getElementById('topupBody').style.display = hasTopup ? 'block' : 'none';
   document.getElementById('topupToggle').classList.toggle('open', hasTopup);
