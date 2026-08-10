@@ -274,6 +274,7 @@
   }
   .balance-actions button.plus{ color: var(--success); border-color: rgba(92,195,148,0.35); }
   .balance-actions button.minus{ color: var(--danger); border-color: rgba(226,104,95,0.35); }
+  .balance-actions button.edit{ color: var(--accent); border-color: rgba(212,165,116,0.35); font-size:14px; }
 
   .tx-list{ max-height:200px; overflow-y:auto; margin-top:4px; }
   .tx-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
@@ -544,6 +545,19 @@
     <div class="modal-actions">
       <button class="btn" id="pwSetupCancel">取消</button>
       <button class="btn btn-primary" id="pwSetupConfirm">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 直接设置余额 弹窗 -->
+<div class="overlay" id="setBalanceOverlay">
+  <div class="modal" style="max-width:340px;">
+    <h2>直接设置余额</h2>
+    <div class="field"><label>新的余额</label><input type="number" id="setBalanceAmount" placeholder="0.00" inputmode="decimal" step="0.01"></div>
+    <p style="font-size:11.5px; color:var(--text-dim); margin:0 0 6px;">会自动生成一条"余额调整"流水记录，差额是多少就记多少。</p>
+    <div class="modal-actions">
+      <button class="btn" id="setBalanceCancel">取消</button>
+      <button class="btn btn-primary" id="setBalanceConfirm">确定</button>
     </div>
   </div>
 </div>
@@ -2921,7 +2935,10 @@ function renderCurrencyResults(query){
   }
   box.style.display = 'block';
 }
-document.getElementById('currencySearch').addEventListener('focus', (e)=> renderCurrencyResults(e.target.value));
+document.getElementById('currencySearch').addEventListener('focus', (e)=>{
+  e.target.value = '';
+  renderCurrencyResults('');
+});
 document.getElementById('currencySearch').addEventListener('input', (e)=> renderCurrencyResults(e.target.value));
 document.addEventListener('click', (e)=>{
   if(!e.target.closest('.currency-search-wrap')){
@@ -3383,12 +3400,42 @@ function renderBalanceSection(c){
         <div class="amt ${balance<0?'neg':''}">${currencySymbol(c.currency)}${balance.toFixed(2)}</div>
       </div>
       <div class="balance-actions">
+        <button class="edit" data-tx-set="1" title="直接设置余额">✎</button>
         <button class="plus" data-tx-add="plus" title="充值">＋</button>
         <button class="minus" data-tx-add="minus" title="消费">－</button>
       </div>
     </div>
     <div class="tx-list">${txHtml}</div>`;
 }
+
+/* ================== 直接设置余额 ================== */
+let setBalanceCardId = null;
+const setBalanceOverlay = document.getElementById('setBalanceOverlay');
+function openSetBalanceModal(cardId){
+  setBalanceCardId = cardId;
+  const c = cards.find(x=>x.id===cardId);
+  document.getElementById('setBalanceAmount').value = c ? getBalance(c).toFixed(2) : '';
+  setBalanceOverlay.classList.add('show');
+  setTimeout(()=> document.getElementById('setBalanceAmount').select(), 40);
+}
+document.getElementById('setBalanceCancel').addEventListener('click', ()=> setBalanceOverlay.classList.remove('show'));
+setBalanceOverlay.addEventListener('click', (e)=>{ if(e.target===setBalanceOverlay) setBalanceOverlay.classList.remove('show'); });
+document.getElementById('setBalanceConfirm').addEventListener('click', async ()=>{
+  const target = parseFloat(document.getElementById('setBalanceAmount').value);
+  if(isNaN(target)){ showToast('请输入有效金额'); return; }
+  const c = cards.find(x=>x.id===setBalanceCardId); if(!c) return;
+  if(!c.transactions) c.transactions = [];
+  const delta = target - getBalance(c);
+  if(Math.abs(delta) > 0.001){
+    c.transactions.unshift({ id: uid(), amount: delta, note: '余额调整', ts: Date.now() });
+  }
+  await persist();
+  setBalanceOverlay.classList.remove('show');
+  renderGrid();
+  const fresh = cards.find(x=>x.id===setBalanceCardId);
+  if(currentDetailId === setBalanceCardId && fresh) renderDetail(fresh);
+  showToast('已更新余额');
+});
 
 /* ================== 记一笔（充值/消费）================== */
 let txContext = { cardId: null, sign: 1 };
@@ -3696,6 +3743,9 @@ function renderDetail(c){
   });
   document.querySelectorAll('[data-tx-add]').forEach(btn=>{
     btn.addEventListener('click', ()=> openTxModal(c.id, btn.dataset.txAdd==='plus' ? 1 : -1));
+  });
+  document.querySelectorAll('[data-tx-set]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openSetBalanceModal(c.id));
   });
   document.querySelectorAll('[data-del-tx]').forEach(btn=>{
     btn.addEventListener('click', ()=> deleteTx(c.id, btn.dataset.delTx));
