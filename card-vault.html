@@ -410,6 +410,7 @@
     <div class="field-row">
       <div class="field"><label>CVV</label><input id="f_cvv" placeholder="123" maxlength="4" inputmode="numeric"></div>
       <div class="field"><label>发卡行</label><input id="f_bank" placeholder="例如：招商银行"></div>
+    <div class="field"><label>货币</label><select id="f_currency"></select></div>
     </div>
     <div class="topup-section">
       <div class="topup-toggle" id="topupToggle">
@@ -2837,6 +2838,31 @@ const DATA_KEY = 'cardVaultData_v2';
 const CAT_KEY = 'cardVaultCategories_v2';
 const THEME_KEY = 'cardVaultTheme';
 const DEFAULT_CATEGORIES = ['信用卡','储蓄卡','虚拟卡','其他'];
+const CURRENCIES = [
+  {code:'CNY',symbol:'¥',name:'人民币'},{code:'USD',symbol:'$',name:'美元'},{code:'EUR',symbol:'€',name:'欧元'},
+  {code:'GBP',symbol:'£',name:'英镑'},{code:'JPY',symbol:'¥',name:'日元'},{code:'KRW',symbol:'₩',name:'韩元'},
+  {code:'HKD',symbol:'HK$',name:'港币'},{code:'TWD',symbol:'NT$',name:'新台币'},{code:'SGD',symbol:'S$',name:'新加坡元'},
+  {code:'AUD',symbol:'A$',name:'澳元'},{code:'CAD',symbol:'C$',name:'加元'},{code:'CHF',symbol:'CHF',name:'瑞士法郎'},
+  {code:'THB',symbol:'฿',name:'泰铢'},{code:'MYR',symbol:'RM',name:'马来西亚林吉特'},{code:'IDR',symbol:'Rp',name:'印尼盾'},
+  {code:'PHP',symbol:'₱',name:'菲律宾比索'},{code:'VND',symbol:'₫',name:'越南盾'},{code:'INR',symbol:'₹',name:'印度卢比'},
+  {code:'RUB',symbol:'₽',name:'俄罗斯卢布'},{code:'BRL',symbol:'R$',name:'巴西雷亚尔'},{code:'MXN',symbol:'MX$',name:'墨西哥比索'},
+  {code:'ZAR',symbol:'R',name:'南非兰特'},{code:'TRY',symbol:'₺',name:'土耳其里拉'},{code:'AED',symbol:'د.إ',name:'阿联酋迪拉姆'},
+  {code:'SAR',symbol:'﷼',name:'沙特里亚尔'},{code:'NZD',symbol:'NZ$',name:'新西兰元'},{code:'SEK',symbol:'kr',name:'瑞典克朗'},
+  {code:'NOK',symbol:'kr',name:'挪威克朗'},{code:'DKK',symbol:'kr',name:'丹麦克朗'},{code:'PLN',symbol:'zł',name:'波兰兹罗提'},
+  {code:'ILS',symbol:'₪',name:'以色列新谢克尔'},{code:'EGP',symbol:'E£',name:'埃及镑'},{code:'PKR',symbol:'₨',name:'巴基斯坦卢比'},
+  {code:'BDT',symbol:'৳',name:'孟加拉塔卡'},{code:'NGN',symbol:'₦',name:'尼日利亚奈拉'},{code:'ARS',symbol:'AR$',name:'阿根廷比索'},
+  {code:'CZK',symbol:'Kč',name:'捷克克朗'},{code:'HUF',symbol:'Ft',name:'匈牙利福林'},{code:'UAH',symbol:'₴',name:'乌克兰格里夫纳'},
+  {code:'USDT',symbol:'₮',name:'USDT'}
+];
+function currencySymbol(code){
+  const c = CURRENCIES.find(x=>x.code===code);
+  return c ? c.symbol : (code || '¥');
+}
+function populateCurrencySelect(){
+  const sel = document.getElementById('f_currency');
+  if(sel.options.length) return; // 只需填充一次
+  sel.innerHTML = CURRENCIES.map(c=>`<option value="${c.code}">${c.symbol} ${c.name} (${c.code})</option>`).join('');
+}
 
 let cards = [];
 let categories = [];
@@ -3102,7 +3128,7 @@ function renderGrid(){
         <div class="card-holder">${escapeHtml(c.holder||'')}</div>
         <div class="card-expiry ${exp==='expired'?'exp-expired':exp==='soon'?'exp-soon':''}">${exp==='expired'?'已过期 · ':exp==='soon'?'⚠ ':''}${escapeHtml(c.expiry||'')}</div>
       </div>
-      ${(c.transactions&&c.transactions.length) ? `<div style="position:absolute; top:44px; right:20px; font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,.6);">¥${getBalance(c).toFixed(2)}</div>` : ''}
+      ${(c.transactions&&c.transactions.length) ? `<div style="position:absolute; top:44px; right:20px; font-family:var(--font-mono); font-size:11px; color:rgba(255,255,255,.6);">${currencySymbol(c.currency)}${getBalance(c).toFixed(2)}</div>` : ''}
     </div>`;
   }).join('');
 
@@ -3289,7 +3315,7 @@ function renderBalanceSection(c){
     <div class="balance-box">
       <div>
         <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">当前余额</div>
-        <div class="amt ${balance<0?'neg':''}">¥${balance.toFixed(2)}</div>
+        <div class="amt ${balance<0?'neg':''}">${currencySymbol(c.currency)}${balance.toFixed(2)}</div>
       </div>
       <div class="balance-actions">
         <button class="plus" data-tx-add="plus" title="充值">＋</button>
@@ -3362,6 +3388,8 @@ function openAddForm(){
   document.getElementById('editId').value = '';
   ['f_label','f_number','f_holder','f_expiry','f_cvv','f_bank','f_note','w_label','w_address','f_topup_address','f_topup_bankid'].forEach(id=> document.getElementById(id).value='');
   document.getElementById('f_topup_network').value = '';
+  populateCurrencySelect();
+  document.getElementById('f_currency').value = 'CNY';
   document.getElementById('topupBody').style.display = 'none';
   document.getElementById('topupToggle').classList.remove('open');
   document.getElementById('numberWarn').classList.remove('show');
@@ -3393,6 +3421,8 @@ function openEditForm(id){
   document.getElementById('f_topup_network').value = c.topupNetwork || '';
   document.getElementById('f_topup_address').value = c.topupAddress || '';
   document.getElementById('f_topup_bankid').value = c.topupBankId || '';
+  populateCurrencySelect();
+  document.getElementById('f_currency').value = c.currency || 'CNY';
   const hasTopup = !!(c.topupNetwork || c.topupAddress || c.topupBankId);
   document.getElementById('topupBody').style.display = hasTopup ? 'block' : 'none';
   document.getElementById('topupToggle').classList.toggle('open', hasTopup);
@@ -3461,6 +3491,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
       expiry: document.getElementById('f_expiry').value.trim(),
       cvv: document.getElementById('f_cvv').value.trim(),
       bank: document.getElementById('f_bank').value.trim(),
+      currency: document.getElementById('f_currency').value || 'CNY',
       note: document.getElementById('f_note').value.trim(),
       topupNetwork: document.getElementById('f_topup_network').value,
       topupAddress: document.getElementById('f_topup_address').value.trim(),
@@ -3567,6 +3598,7 @@ function renderDetail(c){
   rows.push(row('有效期', c.expiry||'—', c.expiry, '有效期', false));
   rows.push(row('持卡人', c.holder||'—', c.holder, '持卡人', false));
   rows.push(row('发卡行', c.bank||'—', c.bank, '发卡行', false));
+  if(c.currency) rows.push(row('货币', currencySymbol(c.currency)+' '+c.currency, null, '', false));
   if(c.category) rows.push(row('分类', c.category, c.category, '分类', false));
   if(c.topupNetwork || c.topupAddress) rows.push(row('虚拟币充值('+escapeHtml(c.topupNetwork||'')+')', c.topupAddress||'—', c.topupAddress, '充值地址'));
   if(c.topupBankId) rows.push(row('银行充值ID', c.topupBankId, c.topupBankId, '充值ID'));
