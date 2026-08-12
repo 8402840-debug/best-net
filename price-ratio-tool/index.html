@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>价格比例计算器</title>
+<style>
+  :root{
+    --font-ui: -apple-system, "Segoe UI", system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    --bg: #0a0c10;
+    --surface: #111419;
+    --surface-2: #171b22;
+    --border: #232833;
+    --text: #eef1f5;
+    --text-dim: #7c8493;
+    --accent: #17e3a8;
+    --accent-dim: #0f9d75;
+    --amber: #e0a94d;
+    --danger: #ef6b62;
+  }
+  body[data-theme="light"]{
+    --bg: #f4f5f7; --surface:#ffffff; --surface-2:#eef0f3; --border:#e0e3e8;
+    --text:#12151a; --text-dim:#6b7280; --accent:#0d9e77; --accent-dim:#17e3a8;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background: var(--bg); color: var(--text); font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+  #app{ opacity:0; transition: opacity .18s ease; }
+  #app.ready{ opacity:1; }
+  .wrap{ max-width: 760px; margin:0 auto; padding: 32px 20px 90px; }
+
+  header{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom: 22px; }
+  .brand h1{ font-size: 20px; font-weight:800; margin:0; letter-spacing:-0.3px; }
+  .brand p{ margin:3px 0 0; font-size:12px; color: var(--text-dim); }
+  .brand .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background: var(--accent); margin-right:7px; box-shadow:0 0 8px var(--accent); }
+  .icon-btn{
+    background: var(--surface); border:1px solid var(--border); color: var(--text-dim);
+    width:34px; height:34px; border-radius:9px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .icon-btn:hover{ border-color: var(--accent); color: var(--accent); }
+
+  /* Profile chip selector */
+  .profile-bar{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px; scrollbar-width:thin; }
+  .profile-chip{
+    flex-shrink:0; display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:11px; cursor:pointer;
+    background: var(--surface); border:1px solid var(--border); white-space:nowrap; transition: all .14s ease;
+  }
+  .profile-chip .bar{ width:4px; height:16px; border-radius:2px; }
+  .profile-chip.active{ border-color: var(--accent); background: var(--surface-2); box-shadow: 0 0 0 1px var(--accent); }
+  .profile-chip .pname{ font-size:13px; font-weight:600; }
+  .profile-chip .pratio{ font-size:11px; color: var(--text-dim); font-family: var(--font-mono); }
+  .profile-chip .edit-ic{ color: var(--text-dim); display:flex; margin-left:2px; }
+  .profile-chip:hover .edit-ic{ color: var(--accent); }
+  .add-chip{
+    flex-shrink:0; display:flex; align-items:center; gap:6px; padding:9px 14px; border-radius:11px; cursor:pointer;
+    border:1px dashed var(--border); color: var(--text-dim); font-size:13px; white-space:nowrap;
+  }
+  .add-chip:hover{ border-color: var(--accent); color: var(--accent); }
+
+  /* Calculator - big terminal style */
+  .calc-box{ border:1px solid var(--border); border-radius:18px; padding:28px 26px; background: var(--surface); position:relative; overflow:hidden; }
+  .calc-box::before{ content:""; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+  .calc-grid{ display:grid; grid-template-columns: 1fr auto 1fr; align-items:end; gap:14px; }
+  .calc-field label{ display:block; font-size:11px; color: var(--text-dim); margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px; }
+  .calc-field input{
+    width:100%; background:transparent; border:none; border-bottom:2px solid var(--border);
+    padding:4px 0 10px; color: var(--text); font-size:30px; font-family: var(--font-mono); font-weight:700;
+    transition: border-color .15s ease;
+  }
+  .calc-field input:focus{ outline:none; border-color: var(--accent); }
+  .calc-eq{ font-size:22px; color: var(--accent); font-weight:300; padding-bottom:14px; }
+  .unit-price{ text-align:center; margin-top:20px; font-size:12.5px; color: var(--text-dim); }
+  .unit-price b{ color: var(--accent); font-family: var(--font-mono); font-weight:700; }
+  .quick-mult{ display:flex; gap:8px; margin-top:18px; flex-wrap:wrap; justify-content:center; }
+  .quick-mult button{
+    background: var(--surface-2); border:1px solid var(--border); color: var(--text-dim); border-radius:8px;
+    padding:7px 13px; font-size:12px; cursor:pointer; font-family: var(--font-mono);
+  }
+  .quick-mult button:hover{ border-color: var(--accent); color: var(--accent); }
+  .quick-mult button.copy{ font-family: var(--font-ui); color: var(--accent); border-color: var(--accent-dim); }
+  .empty-calc{ text-align:center; color: var(--text-dim); font-size:13px; padding:36px 0; }
+
+  /* Batch (collapsible) */
+  .batch-toggle{
+    display:flex; align-items:center; justify-content:space-between; padding:14px 18px; margin-top:16px;
+    background: var(--surface); border:1px solid var(--border); border-radius:12px; cursor:pointer; font-size:13px; color: var(--text-dim);
+  }
+  .batch-toggle svg{ transition: transform .15s ease; }
+  .batch-toggle.open svg{ transform: rotate(180deg); }
+  .batch-body{ display:none; border:1px solid var(--border); border-top:none; border-radius:0 0 12px 12px; padding:18px; background: var(--surface); margin-top:-1px; }
+  .batch-body textarea{
+    width:100%; background: var(--surface-2); border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px; color: var(--text); font-size:14px; font-family: var(--font-mono); resize:vertical; min-height:90px;
+  }
+  .batch-body textarea:focus{ outline:none; border-color: var(--accent); }
+  .batch-results{ margin-top:12px; }
+  .batch-row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-family: var(--font-mono); font-size:13px; }
+
+  button.btn{ font-family: var(--font-ui); cursor:pointer; background: var(--surface-2); border:1px solid var(--border); color: var(--text); padding:9px 15px; border-radius:9px; font-size:12.5px; font-weight:600; transition: border-color .15s ease; }
+  button.btn:hover{ border-color: var(--accent); }
+  button.btn-primary{ background: var(--accent); color:#04140f; font-weight:700; border:1px solid var(--accent); }
+  button.btn-primary:hover{ filter:brightness(1.08); }
+
+  .overlay{ position:fixed; inset:0; background: rgba(3,4,6,.72); display:none; align-items:center; justify-content:center; z-index:60; padding:20px; }
+  .overlay.show{ display:flex; animation: fadeIn .14s ease; }
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+  .modal{ background: var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:400px; padding:24px; max-height:88vh; overflow-y:auto; animation: pop .16s ease; }
+  @keyframes pop{ from{ opacity:0; transform: scale(.96) translateY(6px);} to{ opacity:1; transform:none; } }
+  .modal h2{ font-size:15px; margin:0 0 16px; font-weight:700; }
+  .field{ margin-bottom:13px; }
+  .field label{ display:block; font-size:11px; color: var(--text-dim); margin-bottom:6px; }
+  .field input, .field select{ width:100%; background: var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:9px 11px; color: var(--text); font-size:13.5px; font-family: var(--font-ui); }
+  .field input:focus{ outline:none; border-color: var(--accent); }
+  .field-row{ display:flex; gap:10px; }
+  .field-row .field{ flex:1; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  .danger-text{ color: var(--danger); background:none; border:none; font-size:12px; margin-right:auto; cursor:pointer; }
+  .swatches{ display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .swatch{ width:26px; height:26px; border-radius:7px; cursor:pointer; border:2px solid transparent; }
+  .swatch.selected{ border-color: var(--text); }
+  .c-teal{ background:#17e3a8; } .c-amber{ background:#e0a94d; } .c-violet{ background:#9b7bf0; }
+  .c-blue{ background:#5b9df9; } .c-rose{ background:#ef6b9e; } .c-slate{ background:#6b7684; }
+
+  .currency-search-wrap{ position:relative; }
+  .currency-results{ position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:200px; overflow-y:auto; background: var(--surface); border:1px solid var(--border); border-radius:10px; z-index:80; box-shadow:0 12px 28px rgba(0,0,0,.4); }
+  .currency-result-item{ padding:9px 12px; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; color: var(--text); }
+  .currency-result-item:hover{ background: var(--surface-2); }
+  .currency-result-item .sym{ color: var(--accent); font-weight:700; margin-right:8px; }
+
+  .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background: var(--surface); border:1px solid var(--accent); color: var(--text); padding:9px 16px; border-radius:9px; font-size:13px; z-index:120; opacity:0; pointer-events:none; transition: opacity .2s ease; }
+  .toast.show{ opacity:1; }
+  footer{ text-align:center; margin-top:36px; color: var(--text-dim); font-size:11px; }
+  @media (max-width:480px){
+    .calc-grid{ grid-template-columns: 1fr; }
+    .calc-eq{ text-align:center; padding:2px 0; }
+    .calc-field input{ font-size:26px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1><span class="dot"></span>价格比例计算器</h1>
+      <p>自定义虚拟货币汇率，快速换算价格</p>
+    </div>
+    <button class="icon-btn" id="themeToggle" title="切换主题">
+      <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+  </header>
+
+  <div class="profile-bar" id="profileBar"></div>
+
+  <div class="calc-box" id="calcBox"></div>
+
+  <div class="batch-toggle" id="batchToggle">
+    <span>批量计算</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+  </div>
+  <div class="batch-body" id="batchBody">
+    <textarea id="batchInput" placeholder="每行输入一个虚拟货币数量，例如：&#10;100&#10;250&#10;1000"></textarea>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button class="btn btn-primary" id="batchCalcBtn">批量计算</button>
+      <button class="btn" id="batchCopyBtn">复制结果</button>
+    </div>
+    <div class="batch-results" id="batchResults"></div>
+  </div>
+
+  <footer>所有数据保存在本地浏览器中，不会上传到任何服务器</footer>
+</div>
+</div>
+
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <h2 id="formTitle">添加换算方案</h2>
+    <input type="hidden" id="editId">
+    <div class="field"><label>名称</label><input id="f_name" placeholder="例如：游戏币 / 平台积分 / 钻石"></div>
+    <div class="field-row">
+      <div class="field"><label>虚拟货币数量</label><input type="number" id="f_units" placeholder="100" step="any"></div>
+      <div class="field"><label>对应真实金额</label><input type="number" id="f_amount" placeholder="13.11" step="any"></div>
+    </div>
+    <div class="field">
+      <label>真实货币</label>
+      <div class="currency-search-wrap">
+        <input id="currencySearch" placeholder="搜索货币，例如 人民币 / CNY" autocomplete="off">
+        <div class="currency-results" id="currencyResults" style="display:none;"></div>
+      </div>
+      <select id="f_currency" style="display:none;"></select>
+    </div>
+    <div class="field">
+      <label>标记颜色</label>
+      <div class="swatches" id="swatches">
+        <div class="swatch c-teal selected" data-color="c-teal" title="青绿"></div>
+        <div class="swatch c-amber" data-color="c-amber" title="琥珀"></div>
+        <div class="swatch c-violet" data-color="c-violet" title="紫罗兰"></div>
+        <div class="swatch c-blue" data-color="c-blue" title="蓝"></div>
+        <div class="swatch c-rose" data-color="c-rose" title="玫瑰"></div>
+        <div class="swatch c-slate" data-color="c-slate" title="石板灰"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="danger-text" id="deleteBtn" style="display:none;">删除此方案</button>
+      <button class="btn" id="cancelBtn">取消</button>
+      <button class="btn btn-primary" id="saveBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'priceRatioProfiles_v1';
+const THEME_KEY = 'priceRatioTheme';
+let profiles = [];
+let activeProfileId = null;
+let selectedColor = 'c-teal';
+
+const CURRENCIES = [
+  {code:'CNY',symbol:'¥',name:'人民币'},{code:'USD',symbol:'$',name:'美元'},{code:'EUR',symbol:'€',name:'欧元'},
+  {code:'GBP',symbol:'£',name:'英镑'},{code:'JPY',symbol:'¥',name:'日元'},{code:'KRW',symbol:'₩',name:'韩元'},
+  {code:'HKD',symbol:'HK$',name:'港币'},{code:'TWD',symbol:'NT$',name:'新台币'},{code:'SGD',symbol:'S$',name:'新加坡元'},
+  {code:'AUD',symbol:'A$',name:'澳元'},{code:'CAD',symbol:'C$',name:'加元'},{code:'CHF',symbol:'CHF',name:'瑞士法郎'},
+  {code:'THB',symbol:'฿',name:'泰铢'},{code:'MYR',symbol:'RM',name:'马来西亚林吉特'},{code:'IDR',symbol:'Rp',name:'印尼盾'},
+  {code:'PHP',symbol:'₱',name:'菲律宾比索'},{code:'VND',symbol:'₫',name:'越南盾'},{code:'INR',symbol:'₹',name:'印度卢比'},
+  {code:'RUB',symbol:'₽',name:'俄罗斯卢布'},{code:'BRL',symbol:'R$',name:'巴西雷亚尔'},{code:'MXN',symbol:'MX$',name:'墨西哥比索'},
+  {code:'ZAR',symbol:'R',name:'南非兰特'},{code:'TRY',symbol:'₺',name:'土耳其里拉'},{code:'AED',symbol:'د.إ',name:'阿联酋迪拉姆'},
+  {code:'SAR',symbol:'﷼',name:'沙特里亚尔'},{code:'NZD',symbol:'NZ$',name:'新西兰元'},{code:'SEK',symbol:'kr',name:'瑞典克朗'},
+  {code:'NOK',symbol:'kr',name:'挪威克朗'},{code:'DKK',symbol:'kr',name:'丹麦克朗'},{code:'PLN',symbol:'zł',name:'波兰兹罗提'},
+  {code:'ILS',symbol:'₪',name:'以色列新谢克尔'},{code:'EGP',symbol:'E£',name:'埃及镑'},{code:'PKR',symbol:'₨',name:'巴基斯坦卢比'},
+  {code:'BDT',symbol:'৳',name:'孟加拉塔卡'},{code:'NGN',symbol:'₦',name:'尼日利亚奈拉'},{code:'ARS',symbol:'AR$',name:'阿根廷比索'},
+  {code:'CZK',symbol:'Kč',name:'捷克克朗'},{code:'HUF',symbol:'Ft',name:'匈牙利福林'},{code:'UAH',symbol:'₴',name:'乌克兰格里夫纳'},
+  {code:'USDT',symbol:'₮',name:'USDT'}
+];
+function currencySymbol(code){ const c = CURRENCIES.find(x=>x.code===code); return c ? c.symbol : (code||''); }
+function uid(){ return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+function escapeHtml(str){ const d=document.createElement('div'); d.textContent = str||''; return d.innerHTML; }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); }
+function copyText(text,label){ navigator.clipboard.writeText(text).then(()=> showToast((label||'内容')+' 已复制')); }
+function loadProfiles(){ try{ const raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
+function saveProfiles(){ localStorage.setItem(STORE_KEY, JSON.stringify(profiles)); }
+
+function applyTheme(theme){
+  document.body.dataset.theme = theme;
+  document.getElementById('themeIcon').innerHTML = theme==='light'
+    ? '<circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+    : '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" stroke="currentColor" stroke-width="1.6"/>';
+  localStorage.setItem(THEME_KEY, theme);
+}
+document.getElementById('themeToggle').addEventListener('click', ()=> applyTheme(document.body.dataset.theme==='light' ? 'dark' : 'light'));
+
+function populateCurrencySelect(){
+  const sel = document.getElementById('f_currency');
+  if(sel.options.length) return;
+  sel.innerHTML = CURRENCIES.map(c=>`<option value="${c.code}">${c.symbol} ${c.name} (${c.code})</option>`).join('');
+}
+function setCurrencyValue(code){
+  document.getElementById('f_currency').value = code;
+  const c = CURRENCIES.find(x=>x.code===code);
+  document.getElementById('currencySearch').value = c ? `${c.symbol} ${c.name} (${c.code})` : code;
+  document.getElementById('currencyResults').style.display = 'none';
+}
+function renderCurrencyResults(query){
+  const box = document.getElementById('currencyResults');
+  const q = query.trim().toLowerCase();
+  const matches = q ? CURRENCIES.filter(c=> c.name.includes(query.trim()) || c.code.toLowerCase().includes(q)) : CURRENCIES;
+  box.innerHTML = matches.length ? matches.slice(0,12).map(c=>`
+    <div class="currency-result-item" data-curr="${c.code}"><span><span class="sym">${c.symbol}</span>${c.name}</span><span style="color:var(--text-dim);">${c.code}</span></div>
+  `).join('') : `<div class="currency-result-item" style="color:var(--text-dim);cursor:default;">没有匹配的货币</div>`;
+  box.querySelectorAll('.currency-result-item[data-curr]').forEach(item=>{
+    item.addEventListener('click', ()=> setCurrencyValue(item.dataset.curr));
+  });
+  box.style.display = 'block';
+}
+document.getElementById('currencySearch').addEventListener('focus', (e)=>{ e.target.value=''; renderCurrencyResults(''); });
+document.getElementById('currencySearch').addEventListener('input', (e)=> renderCurrencyResults(e.target.value));
+document.addEventListener('click', (e)=>{ if(!e.target.closest('.currency-search-wrap')) document.getElementById('currencyResults').style.display='none'; });
+
+function renderProfileBar(){
+  const bar = document.getElementById('profileBar');
+  let html = profiles.map(p=>`
+    <div class="profile-chip ${activeProfileId===p.id?'active':''}" data-id="${p.id}">
+      <span class="bar ${p.color||'c-teal'}"></span>
+      <span>
+        <div class="pname">${escapeHtml(p.name)}</div>
+        <div class="pratio">${p.units}=${currencySymbol(p.currency)}${p.amount}</div>
+      </span>
+      <span class="edit-ic" data-edit="${p.id}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+    </div>`).join('');
+  html += `<div class="add-chip" id="addProfileChip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>新建方案</div>`;
+  bar.innerHTML = html;
+  bar.querySelectorAll('.profile-chip').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-edit]')) return;
+      activeProfileId = el.dataset.id; renderProfileBar(); renderCalc();
+    });
+  });
+  bar.querySelectorAll('[data-edit]').forEach(el=>{
+    el.addEventListener('click', (e)=>{ e.stopPropagation(); openEditForm(el.dataset.edit); });
+  });
+  document.getElementById('addProfileChip').addEventListener('click', openAddForm);
+  if(!activeProfileId && profiles.length) activeProfileId = profiles[0].id;
+}
+
+function renderCalc(){
+  const box = document.getElementById('calcBox');
+  const p = profiles.find(x=>x.id===activeProfileId);
+  if(!p){ box.innerHTML = `<div class="empty-calc">先新建一个换算方案吧</div>`; return; }
+  const rate = p.amount / p.units;
+  box.innerHTML = `
+    <div class="calc-grid">
+      <div class="calc-field"><label>${escapeHtml(p.name)}</label><input type="number" id="calcVirtual" step="any" value="${p.units}"></div>
+      <div class="calc-eq">=</div>
+      <div class="calc-field"><label>${currencySymbol(p.currency)} ${p.currency}</label><input type="number" id="calcReal" step="any" value="${p.amount}"></div>
+    </div>
+    <div class="unit-price">1 ${escapeHtml(p.name)} ≈ <b>${currencySymbol(p.currency)}${rate.toFixed(6).replace(/0+$/,'').replace(/\.$/,'')}</b></div>
+    <div class="quick-mult">
+      <button data-mult="10">10</button><button data-mult="100">100</button>
+      <button data-mult="1000">1000</button><button data-mult="10000">10000</button>
+      <button class="copy" id="calcCopyBtn">复制结果</button>
+    </div>`;
+  const vEl = document.getElementById('calcVirtual');
+  const rEl = document.getElementById('calcReal');
+  vEl.addEventListener('input', ()=>{ const v=parseFloat(vEl.value); rEl.value = isNaN(v)?'':(v*rate).toFixed(4).replace(/0+$/,'').replace(/\.$/,''); });
+  rEl.addEventListener('input', ()=>{ const r=parseFloat(rEl.value); vEl.value = isNaN(r)?'':(r/rate).toFixed(4).replace(/0+$/,'').replace(/\.$/,''); });
+  box.querySelectorAll('[data-mult]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ vEl.value = btn.dataset.mult; vEl.dispatchEvent(new Event('input')); });
+  });
+  document.getElementById('calcCopyBtn').addEventListener('click', ()=> copyText(`${vEl.value} ${p.name} = ${currencySymbol(p.currency)}${rEl.value}`, '计算结果'));
+}
+
+const formOverlay = document.getElementById('formOverlay');
+function updateSwatchSelection(){ document.querySelectorAll('.swatch').forEach(s=> s.classList.toggle('selected', s.dataset.color===selectedColor)); }
+document.getElementById('swatches').addEventListener('click',(e)=>{ const sw=e.target.closest('.swatch'); if(!sw) return; selectedColor=sw.dataset.color; updateSwatchSelection(); });
+
+function openAddForm(){
+  document.getElementById('formTitle').textContent='添加换算方案';
+  document.getElementById('editId').value='';
+  document.getElementById('f_name').value='';
+  document.getElementById('f_units').value='100';
+  document.getElementById('f_amount').value='';
+  populateCurrencySelect(); setCurrencyValue('CNY');
+  selectedColor='c-teal'; updateSwatchSelection();
+  document.getElementById('deleteBtn').style.display='none';
+  formOverlay.classList.add('show');
+  setTimeout(()=> document.getElementById('f_name').focus(), 40);
+}
+function openEditForm(id){
+  const p = profiles.find(x=>x.id===id); if(!p) return;
+  document.getElementById('formTitle').textContent='编辑换算方案';
+  document.getElementById('editId').value=id;
+  document.getElementById('f_name').value=p.name;
+  document.getElementById('f_units').value=p.units;
+  document.getElementById('f_amount').value=p.amount;
+  populateCurrencySelect(); setCurrencyValue(p.currency);
+  selectedColor = p.color||'c-teal'; updateSwatchSelection();
+  document.getElementById('deleteBtn').style.display='block';
+  formOverlay.classList.add('show');
+}
+document.getElementById('cancelBtn').addEventListener('click', ()=> formOverlay.classList.remove('show'));
+formOverlay.addEventListener('click',(e)=>{ if(e.target===formOverlay) formOverlay.classList.remove('show'); });
+
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('f_name').value.trim();
+  const units = parseFloat(document.getElementById('f_units').value);
+  const amount = parseFloat(document.getElementById('f_amount').value);
+  const currency = document.getElementById('f_currency').value || 'CNY';
+  if(!name || !units || isNaN(amount)){ showToast('请完整填写名称、数量和金额'); return; }
+  const editId = document.getElementById('editId').value;
+  const data = { name, units, amount, currency, color: selectedColor };
+  if(editId){
+    const idx = profiles.findIndex(p=>p.id===editId);
+    if(idx>-1) profiles[idx] = {...profiles[idx], ...data};
+    showToast('已更新');
+  }else{
+    const newP = { id: uid(), ...data };
+    profiles.push(newP); activeProfileId = newP.id;
+    showToast('已添加');
+  }
+  saveProfiles(); renderProfileBar(); renderCalc();
+  formOverlay.classList.remove('show');
+});
+document.getElementById('deleteBtn').addEventListener('click', ()=>{
+  const editId = document.getElementById('editId').value; if(!editId) return;
+  if(confirm('确定删除这个换算方案吗？')){
+    profiles = profiles.filter(p=>p.id!==editId);
+    if(activeProfileId===editId) activeProfileId = profiles.length ? profiles[0].id : null;
+    saveProfiles(); renderProfileBar(); renderCalc();
+    formOverlay.classList.remove('show');
+    showToast('已删除');
+  }
+});
+
+document.getElementById('batchToggle').addEventListener('click', ()=>{
+  const body = document.getElementById('batchBody');
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  document.getElementById('batchToggle').classList.toggle('open', !open);
+});
+document.getElementById('batchCalcBtn').addEventListener('click', ()=>{
+  const p = profiles.find(x=>x.id===activeProfileId);
+  if(!p){ showToast('请先选择一个换算方案'); return; }
+  const rate = p.amount / p.units;
+  const lines = document.getElementById('batchInput').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(lines.length === 0){ showToast('请输入至少一行数量'); return; }
+  const results = lines.map(line=>{ const v=parseFloat(line); return isNaN(v) ? {line,ok:false} : {line,ok:true,virtual:v,real:v*rate}; });
+  document.getElementById('batchResults').innerHTML = results.map(r=>
+    r.ok ? `<div class="batch-row"><span>${r.virtual} ${escapeHtml(p.name)}</span><span>${currencySymbol(p.currency)}${r.real.toFixed(4).replace(/0+$/,'').replace(/\.$/,'')}</span></div>`
+         : `<div class="batch-row" style="color:var(--danger);"><span>${escapeHtml(r.line)}</span><span>无法识别</span></div>`
+  ).join('');
+});
+document.getElementById('batchCopyBtn').addEventListener('click', ()=>{
+  const rows = document.querySelectorAll('#batchResults .batch-row');
+  if(rows.length===0){ showToast('还没有计算结果'); return; }
+  copyText(Array.from(rows).map(r=>r.textContent).join('\n'), '结果列表');
+});
+
+applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+profiles = loadProfiles();
+renderProfileBar();
+renderCalc();
+document.getElementById('app').classList.add('ready');
+</script>
+</body>
+</html>
