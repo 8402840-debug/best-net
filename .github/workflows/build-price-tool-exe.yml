@@ -1,0 +1,36 @@
+name: Build PriceRatioTool EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'price-ratio-tool/**'
+      - '.github/workflows/build-price-tool-exe.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: price-ratio-tool
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build portable exe
+        run: npx electron-builder --win portable
+
+      - name: Upload exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PriceRatioTool-exe
+          path: price-ratio-tool/dist/*.exe

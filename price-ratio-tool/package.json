@@ -1,0 +1,23 @@
+{
+  "name": "price-ratio-tool",
+  "version": "1.0.0",
+  "description": "价格比例计算器",
+  "main": "main.js",
+  "author": "PriceRatioTool",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.pricetool.app",
+    "productName": "PriceRatioTool",
+    "win": { "target": "portable", "icon": "icon.ico" },
+    "files": ["main.js", "index.html", "icon.ico"],
+    "directories": { "output": "dist" }
+  }
+}
