@@ -242,6 +242,24 @@
   .topup-toggle.open svg{ transform: rotate(180deg); }
   .topup-body{ padding:14px 13px 4px; }
 
+  .more-toggle{
+    display:flex; align-items:center; justify-content:space-between; padding:11px 13px;
+    cursor:pointer; font-size:12.5px; color:var(--text-dim); background: var(--surface-2);
+    border:1px solid var(--border); border-radius:10px; margin:16px 0 14px;
+  }
+  .more-toggle svg{ transition: transform .15s ease; }
+  .more-toggle.open svg{ transform: rotate(180deg); }
+  .more-body{ padding-top:2px; }
+
+  .data-menu{
+    position:absolute; top:calc(100% + 6px); right:0; min-width:180px; z-index:40;
+    background: var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.4);
+  }
+  .data-menu-item{ padding:10px 14px; font-size:13px; cursor:pointer; color: var(--text); }
+  .data-menu-item:hover{ background: var(--panel-hi); }
+  .data-menu-item + .data-menu-item{ border-top:1px solid var(--line); }
+
   .currency-quick{ display:flex; gap:6px; flex-wrap:wrap; }
   .curr-chip{
     padding:7px 12px; border-radius:8px; background: var(--surface-2); border:1px solid var(--border);
@@ -373,9 +391,18 @@
       <option value="name">按名称</option>
       <option value="bank">按银行</option>
     </select>
-    <button class="btn" id="exportJsonBtn">导出备份</button>
-    <button class="btn" id="exportCsvBtn">导出表格</button>
-    <button class="btn" id="importBtn">导入备份</button>
+    <div class="data-menu-wrap" style="position:relative;">
+      <button class="btn" id="dataMenuBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        数据管理
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div class="data-menu" id="dataMenu" style="display:none;">
+        <div class="data-menu-item" id="exportJsonBtn">导出备份 (JSON)</div>
+        <div class="data-menu-item" id="exportCsvBtn">导出表格 (CSV)</div>
+        <div class="data-menu-item" id="importBtn">导入备份</div>
+      </div>
+    </div>
     <input type="file" id="importFile" accept=".json" style="display:none">
     <button class="btn btn-primary" id="addBtn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#1a1408" stroke-width="2" stroke-linecap="round"/></svg>
@@ -432,40 +459,47 @@
       <div class="field"><label>持卡人</label><input id="f_holder" placeholder="姓名"></div>
       <div class="field"><label>有效期 (MM/YY)</label><input id="f_expiry" placeholder="08/29" maxlength="5"></div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>CVV</label><input id="f_cvv" placeholder="123" maxlength="4" inputmode="numeric"></div>
-      <div class="field"><label>发卡行</label><input id="f_bank" placeholder="例如：招商银行"></div>
-    <div class="field">
-      <label>货币</label>
-      <div class="currency-search-wrap" style="position:relative;">
-        <input id="currencySearch" placeholder="搜索货币，例如 泰铢 / THB / 美元" autocomplete="off">
-        <div class="currency-results" id="currencyResults" style="display:none;"></div>
-      </div>
-      <select id="f_currency" style="display:none;"></select>
+
+    <div class="more-toggle" id="moreToggle">
+      <span>更多信息（CVV / 发卡行 / 货币 / 分类 / 充值渠道 / 备注 / 颜色）</span>
+      <svg id="moreChevron" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </div>
-    </div>
-    <div class="topup-section">
-      <div class="topup-toggle" id="topupToggle">
-        <span>💰 充值渠道（可选）</span>
-        <svg id="topupChevron" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <div class="more-body" id="moreBody" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>CVV</label><input id="f_cvv" placeholder="123" maxlength="4" inputmode="numeric"></div>
+        <div class="field"><label>发卡行</label><input id="f_bank" placeholder="例如：招商银行"></div>
       </div>
-      <div class="topup-body" id="topupBody" style="display:none;">
-        <div class="field-row">
-          <div class="field">
-            <label>虚拟币充值网络</label>
-            <select id="f_topup_network">
-              <option value="">不使用</option>
-              <option>USDT-TRC20</option>
-              <option>USDT-ERC20</option>
-              <option>USDT-BEP20</option>
-              <option>BTC</option>
-              <option>ETH</option>
-              <option>其他</option>
-            </select>
-          </div>
+      <div class="field">
+        <label>货币</label>
+        <div class="currency-search-wrap" style="position:relative;">
+          <input id="currencySearch" placeholder="搜索货币，例如 泰铢 / THB / 美元" autocomplete="off">
+          <div class="currency-results" id="currencyResults" style="display:none;"></div>
         </div>
-        <div class="field"><label>虚拟币充值地址</label><input id="f_topup_address" placeholder="粘贴充值地址..." style="font-family:var(--font-mono); font-size:12.5px;"></div>
-        <div class="field"><label>银行充值ID/账号</label><input id="f_topup_bankid" placeholder="用于银行转账充值的账号/参考ID"></div>
+        <select id="f_currency" style="display:none;"></select>
+      </div>
+      <div class="topup-section">
+        <div class="topup-toggle" id="topupToggle">
+          <span>💰 充值渠道（可选）</span>
+          <svg id="topupChevron" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="topup-body" id="topupBody" style="display:none;">
+          <div class="field-row">
+            <div class="field">
+              <label>虚拟币充值网络</label>
+              <select id="f_topup_network">
+                <option value="">不使用</option>
+                <option>USDT-TRC20</option>
+                <option>USDT-ERC20</option>
+                <option>USDT-BEP20</option>
+                <option>BTC</option>
+                <option>ETH</option>
+                <option>其他</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label>虚拟币充值地址</label><input id="f_topup_address" placeholder="粘贴充值地址..." style="font-family:var(--font-mono); font-size:12.5px;"></div>
+          <div class="field"><label>银行充值ID/账号</label><input id="f_topup_bankid" placeholder="用于银行转账充值的账号/参考ID"></div>
+        </div>
       </div>
     </div>
     </div>
@@ -3508,6 +3542,8 @@ function openAddForm(){
   selectedTheme = 'theme-midnight'; updateSwatchSelection();
   document.getElementById('deleteBtn').style.display = 'none';
   renderCategorySelect(null);
+  document.getElementById('moreBody').style.display = 'none';
+  document.getElementById('moreToggle').classList.remove('open');
   setFormType('bank');
   formOverlay.classList.add('show');
   setTimeout(()=> document.getElementById('f_label').focus(), 40);
@@ -3543,6 +3579,9 @@ function openEditForm(id){
   selectedTheme = c.theme||'theme-midnight'; updateSwatchSelection();
   document.getElementById('deleteBtn').style.display = 'block';
   renderCategorySelect(c.category || null);
+  const hasMore = !!(c.cvv || c.bank || (c.currency && c.currency!=='CNY') || c.topupNetwork || c.topupAddress || c.topupBankId);
+  document.getElementById('moreBody').style.display = hasMore ? 'block' : 'none';
+  document.getElementById('moreToggle').classList.toggle('open', hasMore);
   setFormType(type);
   formOverlay.classList.add('show');
 }
@@ -3555,6 +3594,13 @@ document.getElementById('topupToggle').addEventListener('click', ()=>{
   const isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   document.getElementById('topupToggle').classList.toggle('open', !isOpen);
+});
+
+document.getElementById('moreToggle').addEventListener('click', ()=>{
+  const body = document.getElementById('moreBody');
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('moreToggle').classList.toggle('open', !isOpen);
 });
 
 document.getElementById('typeSwitch').addEventListener('click', (e)=>{
@@ -3826,6 +3872,17 @@ async function saveViaBestMethod(content, defaultName, filters){
   showToast('已导出');
 }
 
+document.getElementById('dataMenuBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const menu = document.getElementById('dataMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.data-menu-wrap')) document.getElementById('dataMenu').style.display = 'none';
+});
+document.getElementById('dataMenu').addEventListener('click', (e)=>{
+  if(e.target.classList.contains('data-menu-item')) document.getElementById('dataMenu').style.display = 'none';
+});
 document.getElementById('exportJsonBtn').addEventListener('click', ()=>{
   saveViaBestMethod(JSON.stringify({cards, categories}, null, 2), 'card-vault-backup.json', [{name:'JSON 文件', extensions:['json']}]);
 });
